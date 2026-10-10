@@ -1,7 +1,8 @@
-# Marine OS (with built-in Ultraviolet proxy)
+# Marine OS (with built-in Scramjet + Ultraviolet proxy)
 
-Everything is in this one folder. Marine OS is `public/index.html`; its Browser app sends
-pages through Ultraviolet using the small Node server in `src/`.
+Everything is in this one folder. Marine OS is `public/index.html`; its **Browser** app sends
+pages through a proxy, using the small Node server in `src/` (it uses only Node's built-in
+parts plus the proxy packages).
 
 ## Easiest: run it on your computer
 1. Install Node.js (the LTS version) from https://nodejs.org
@@ -15,38 +16,55 @@ pages through Ultraviolet using the small Node server in `src/`.
 The proxy needs a host that runs Node and allows WebSockets. A static host
 (GitHub Pages, Netlify, Vercel, Site123) can NOT run it.
 - **Render (free tier):** put this folder in a GitHub repo, then on render.com choose
-  New > Blueprint and pick the repo. `render.yaml` is already set up.
+  New > Blueprint and pick the repo (`render.yaml` is set up), or New > Web Service with
+  build `npm install`, start `npm start`, and Health Check Path `/healthz`.
 - **Anything else (Railway, Fly.io, Replit, a VPS):** build `npm install`, start `npm start`.
   A `Dockerfile` is included too. The host provides PORT automatically.
 Use the https address it gives you. Service workers need HTTPS (localhost is exempt).
 
-## Speed
-The Browser has two engines (Settings > Browser > Proxy engine):
-- **Auto (default):** uses **Scramjet**, the newer and faster proxy, and switches to
-  **Ultraviolet** by itself if Scramjet isn't available on the server.
-- Scramjet or Ultraviolet: force one. If a site looks broken on one, try the other.
+## Engines and speed
+Settings > Browser > **Proxy engine**:
+- **Auto (default):** tries **Scramjet** (newer, faster); if it is missing, or a page has not
+  loaded after 15 seconds, it switches to **Ultraviolet** by itself.
+- Scramjet / Ultraviolet: force one. If a site looks broken on one, try the other.
+- **Test the proxy** (same place) is the first thing to run if pages don't load. It reports
+  three things: whether the SERVER can reach real sites (and whether a search engine is
+  blocking it), then whether Ultraviolet and Scramjet can load example.com, Wikipedia and a
+  search page. Send that whole result if you ever need help.
+- If a page fails to load, a yellow bar shows the real error and a one-click **Try the other
+  engine** button.
+- Search engines often block free hosting addresses with a captcha. Bing is the default;
+  switch to another in Settings > Browser > Search engine if one gives a captcha.
 
-Things that make the biggest difference to speed:
-- **Render's free plan sleeps** after 15 minutes without visitors, and the first load
-  then takes up to a minute. A free uptime pinger (for example UptimeRobot) that opens
-  your site every 5 minutes keeps it awake.
-- **Pick the Render region nearest to you** when you create the service.
+What makes things slow, and what is already done about it:
+- The tunnel server was changed from the deprecated `wisp-server-node` to `@mercuryworkshop/wisp-js`.
+- The server compresses and caches its big files (the page is about 6x smaller on the wire),
+  keeps connections alive the way Render expects, and prefers IPv4 (free hosts often have no IPv6).
+- **Settings > Display > Performance mode** turns off blur, animation and shadows. It is on
+  by default for slower computers.
+- **Render's free plan sleeps** after 15 minutes without visitors; the first load then takes
+  up to a minute. A free uptime pinger (for example UptimeRobot) that opens
+  `https://YOUR-SITE.onrender.com/healthz` every 5 minutes keeps it awake.
+- Pick the Render region nearest to you when you create the service.
 - Free hosts are slow for video and heavy sites. Lighter pages are much faster.
 
 ## Troubleshooting
-- Browser says **Proxy offline**: you opened `index.html` as a file or from a static host.
+- **"Proxy offline" in the Browser:** you opened `index.html` as a file or from a static host.
   Open the address of this Node server instead.
-- Browser opens but sites never appear: start with `ISOLATE=1 npm start`
+- **Logs say "Scramjet engine: not installed":** the Browser still works using Ultraviolet.
+- **Browser opens but sites never appear:** restart with `ISOLATE=1 npm start`
   (Windows PowerShell: `$env:ISOLATE=1; npm start`). This can blank game embeds.
-- `npm install` complains about a version: copy the dependency versions from the official
-  Ultraviolet-App repo: https://github.com/titaniumnetwork-dev/Ultraviolet-App
-- Some sites (logins, video, heavy web apps) will not work. Ultraviolet is no longer
-  actively maintained; its authors point to a newer project, Scramjet.
+- **`npm install` complains about a version:** copy the dependency versions from the official
+  repos: https://github.com/titaniumnetwork-dev/Ultraviolet-App and
+  https://github.com/MercuryWorkshop/Scramjet-App
+- Some sites (logins, video, heavy web apps) will not work. Heavy traffic from one free-host
+  address can also make some sites refuse the connection.
 
 ## Files
 - `public/index.html`  Marine OS
 - `public/sw.js`, `public/uv/uv.config.js`  Ultraviolet service worker + settings
-- `src/index.js`  serves everything and the /wisp/ socket the proxy uses
+- `public/sjsw.js`  Scramjet service worker
+- `src/index.js`  serves everything and the /wisp/ tunnel the proxies use
 
-Ultraviolet (Titanium Network) and Scramjet, bare-mux, Epoxy and libcurl-transport (Mercury Workshop).
-Check their licenses before publishing a public site.
+Ultraviolet (Titanium Network) and Scramjet, bare-mux, Epoxy, libcurl-transport and wisp-js
+(Mercury Workshop). Check their licenses before publishing a public site.
