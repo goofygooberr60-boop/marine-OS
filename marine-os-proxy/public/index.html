@@ -833,6 +833,7 @@ body.bigcur,body.bigcur *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://ww
                 <h2 class="text-3xl font-bold text-white mb-2">Browser</h2>
                 <p class="text-slate-400 text-sm mb-8">Settings for the Marine Browser app.</p>
                 <div class="bg-[#1a1a1c] border border-white/5 rounded-2xl p-2">
+                    <div class="flex items-center justify-between gap-4 p-4"><span class="min-w-0"><span class="block font-bold text-sm text-slate-200">Proxy engine</span><span class="block text-xs text-slate-500 mt-0.5">Auto tries the faster Scramjet first and switches to Ultraviolet if it is unavailable.</span></span><select id="bProxy" class="bg-[#111113] border border-white/10 rounded-lg px-3 py-2 text-sm text-white cursor-pointer outline-none focus:border-orange-500"><option value="auto">Auto (recommended)</option><option value="sj">Scramjet</option><option value="uv">Ultraviolet</option></select></div><div class="h-px bg-white/5 mx-4"></div>
                     <div class="flex items-center justify-between gap-4 p-4"><span class="min-w-0"><span class="block font-bold text-sm text-slate-200">Search engine</span><span class="block text-xs text-slate-500 mt-0.5">Used when you type something that is not a web address.</span></span><select id="bEngine" class="bg-[#111113] border border-white/10 rounded-lg px-3 py-2 text-sm text-white cursor-pointer outline-none focus:border-orange-500"><option value="ddg">DuckDuckGo</option><option value="google">Google</option><option value="bing">Bing</option><option value="brave">Brave Search</option></select></div><div class="h-px bg-white/5 mx-4"></div>
                     <div class="flex items-center justify-between gap-4 p-4"><span class="min-w-0"><span class="block font-bold text-sm text-slate-200">Show bookmarks bar</span></span><input type="checkbox" id="toggleBookBar" class="toggle toggle-warning toggle-sm shrink-0"></div><div class="h-px bg-white/5 mx-4"></div>
                     <div class="flex items-center justify-between gap-4 p-4"><span class="min-w-0"><span class="block font-bold text-sm text-slate-200">Browsing history</span><span class="block text-xs text-slate-500 mt-0.5">Remove every page from your history.</span></span><button id="bClearHist" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-slate-200 text-sm font-semibold rounded-lg transition-colors border border-white/5 cursor-pointer shrink-0">Clear history</button></div><div class="h-px bg-white/5 mx-4"></div>
@@ -1555,18 +1556,25 @@ const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){re
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
 const badge=(u,t,sz)=>{const h=hostOf(u);return `<span class="inline-flex items-center justify-center rounded-lg text-white font-bold shrink-0" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.5)}px;background:hsl(${hue(h)} 55% 42%)">${esc((t||h).charAt(0).toUpperCase())}</span>`};
 const uvLoad=src=>new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>no(new Error('missing'));document.head.append(s)});
-const UVERR={file:'The proxy only works when Marine OS is served by the Ultraviolet server, not opened as a file.',sw:'This browser blocked service workers. Use HTTPS or localhost.',missing:'Proxy files were not found. Host Marine OS with the included Ultraviolet server.',swreg:'The proxy service worker could not start. Check that /sw.js exists on the server.'};
-let uvInit=null;
-function uvStart(){return uvInit||(uvInit=(async()=>{
- if(location.protocol==='file:')throw new Error('file');
- if(!navigator.serviceWorker)throw new Error('sw');
- await uvLoad('/uv/uv.bundle.js');await uvLoad('/uv/uv.config.js');await uvLoad('/baremux/index.js');
+const UVERR={file:'The proxy only works when Marine OS is served by the Ultraviolet server, not opened as a file.',sw:'This browser blocked service workers. Use HTTPS or localhost.',missing:'Proxy files were not found. Host Marine OS with the included Ultraviolet server.',swreg:'The proxy service worker could not start. Check that /sw.js and /sjsw.js exist on the server.',sjapi:'The Scramjet files on the server are a different version than this page expects. Switch the engine to Ultraviolet in Settings > Browser.'};
+const PX={name:'',label:'',enc:null,dec:null};let pxP=null;
+const waitSW=reg=>{const w=reg.installing||reg.waiting;return w&&!reg.active?new Promise(r=>{w.addEventListener('statechange',()=>{if(w.state==='activated')r()});setTimeout(r,4000)}):Promise.resolve()};
+const wispURL=()=>(location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/wisp/';
+async function setTransport(path){const c=new BareMux.BareMuxConnection('/baremux/worker.js');if((await c.getTransport())!==path)await c.setTransport(path,[{wisp:wispURL()}])}
+async function startUV(){await uvLoad('/uv/uv.bundle.js');await uvLoad('/uv/uv.config.js');await uvLoad('/baremux/index.js');
  let reg=null;for(const p of['/sw.js','/uv/sw.js']){try{reg=await navigator.serviceWorker.register(p,{scope:__uv$config.prefix});break}catch(e){}}
- if(!reg)throw new Error('swreg');
- const w=reg.installing||reg.waiting;if(w&&!reg.active)await new Promise(r=>{w.addEventListener('statechange',()=>{if(w.state==='activated')r()});setTimeout(r,4000)});
- const c=new BareMux.BareMuxConnection('/baremux/worker.js'),wisp=(location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/wisp/';
- if((await c.getTransport())!=='/epoxy/index.mjs')await c.setTransport('/epoxy/index.mjs',[{wisp}]);
- return true})().catch(e=>{uvInit=null;throw e}))}
+ if(!reg)throw new Error('swreg');await waitSW(reg);await setTransport('/epoxy/index.mjs');
+ const pre=__uv$config.prefix;Object.assign(PX,{name:'uv',label:'Ultraviolet',enc:u=>pre+__uv$config.encodeUrl(u),dec:p=>p.startsWith(pre)?__uv$config.decodeUrl(p.slice(pre.length)):null})}
+async function startSJ(){await uvLoad('/baremux/index.js');await uvLoad('/scram/scramjet.all.js');if(typeof $scramjetLoadController!=='function')throw new Error('sjapi');
+ const{ScramjetController}=$scramjetLoadController();const sj=new ScramjetController({files:{wasm:'/scram/scramjet.wasm.wasm',all:'/scram/scramjet.all.js',sync:'/scram/scramjet.sync.js'}});
+ await sj.init();let reg;try{reg=await navigator.serviceWorker.register('/sjsw.js',{scope:'/scramjet/'})}catch(e){throw new Error('swreg')}
+ await waitSW(reg);await setTransport('/libcurl/index.mjs');
+ Object.assign(PX,{name:'sj',label:'Scramjet',enc:u=>sj.encodeUrl(u),dec:p=>{try{const d=sj.decodeUrl(p);return/^https?:/.test(d)?d:null}catch(e){return null}}})}
+function proxyStart(){return pxP||(pxP=(async()=>{
+ if(location.protocol==='file:')throw new Error('file');if(!navigator.serviceWorker)throw new Error('sw');
+ const pref=store.get('proxyEngine','auto');
+ if(pref!=='uv'){try{await startSJ();return}catch(e){if(pref==='sj')throw e}}
+ await startUV()})().catch(e=>{pxP=null;throw e}))}
 function uvURL(q){q=q.trim();if(!q)return'';if(/^https?:\/\//i.test(q))return q;if(/^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(q))return'https://'+q;return ENG[bEng][1]+encodeURIComponent(q)}
 const setStatus=(t,c)=>{const s=$('uvStatus');s.textContent=t;s.className='shrink-0 hidden sm:inline text-[11px] px-2 py-1 rounded-full '+(c||'bg-white/5 text-slate-400')};
 const uvNote=m=>{const n=$('uvNote');n.textContent=m||'';n.classList.toggle('hidden',!m)};
@@ -1588,9 +1596,9 @@ function syncBar(){const t=cur();if(!t)return;const a=$('uvAddress');if(document
 function startLoad(){const l=$('uvLoadFill');l.style.transition='none';l.style.width='0%';l.style.opacity='1';requestAnimationFrame(()=>{l.style.transition='width 8s cubic-bezier(.1,.6,.2,1)';l.style.width='85%'})}
 function endLoad(){const l=$('uvLoadFill');l.style.transition='width .2s';l.style.width='100%';setTimeout(()=>{l.style.opacity='0'},260)}
 async function uvGo(q,t){t=t||cur();const u=uvURL(q);if(!u||!t)return;setStatus('Connecting...','bg-amber-500/15 text-amber-300');uvNote('');
- try{await uvStart();t.url=u;t.title=hostOf(u);t.f.src=__uv$config.prefix+__uv$config.encodeUrl(u);t.f.classList.toggle('hidden',t.id!==curId);if(t.id===curId)startLoad();setStatus('Proxied','bg-emerald-500/15 text-emerald-300');renderTabs();syncBar()}
+ try{await proxyStart();t.url=u;t.title=hostOf(u);t.f.src=PX.enc(u);t.f.classList.toggle('hidden',t.id!==curId);if(t.id===curId)startLoad();setStatus('Proxied · '+PX.label,'bg-emerald-500/15 text-emerald-300');renderTabs();syncBar()}
  catch(e){setStatus('Offline','bg-red-500/15 text-red-300');t.url='';uvNote(UVERR[e.message]||('Proxy error: '+e.message));pickTab(t.id)}}
-function tabLoaded(t){if(!t.url)return;try{const w=t.f.contentWindow,p=w.location.pathname,pre=__uv$config.prefix;if(p.startsWith(pre))t.url=__uv$config.decodeUrl(p.slice(pre.length));const d=t.f.contentDocument&&t.f.contentDocument.title;if(d)t.title=d.slice(0,80)}catch(e){}
+function tabLoaded(t){if(!t.url)return;try{const w=t.f.contentWindow,d0=PX.dec&&PX.dec(w.location.pathname);if(d0)t.url=d0;const d=t.f.contentDocument&&t.f.contentDocument.title;if(d)t.title=d.slice(0,80)}catch(e){}
  if(bHist[0]&&bHist[0].u===t.url)bHist[0].t=t.title;else bHist.unshift({t:t.title,u:t.url,ts:Date.now()});saveB();if(t.id===curId){endLoad();syncBar()}renderTabs()}
 function renderNewPage(){const n=new Date(),hr=n.getHours();$('uvClock').textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});$('uvGreet').textContent=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
  const d=$('uvDial');d.innerHTML='';bBook.slice(0,10).forEach(b=>{const x=document.createElement('button');x.className='flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-blue-500/50 cursor-pointer transition-all';x.innerHTML=badge(b.u,b.t,44)+`<span class="text-xs text-slate-300 truncate w-full">${esc(b.t)}</span>`;x.onclick=()=>uvGo(b.u);d.append(x)});
@@ -1625,6 +1633,7 @@ $('uvMenu').addEventListener('click',e=>{const b=e.target.closest('[data-uvact]'
 document.addEventListener('mousedown',e=>{if(!e.target.closest('#uvMenu,#uvMenuBtn'))$('uvMenu').classList.add('hidden')});
 document.addEventListener('keydown',e=>{if(active!=='browserWindow'||!e.altKey)return;const k=e.key.toLowerCase();
  if(k==='t'){e.preventDefault();newTab()}else if(k==='w'){e.preventDefault();closeTab(curId)}else if(k==='l'){e.preventDefault();$('uvAddress').focus()}});
+$('bProxy').value=store.get('proxyEngine','auto');$('bProxy').onchange=e=>{store.set('proxyEngine',e.target.value);pxP=null;PX.enc=null;setStatus('Engine changed. Reload your pages.','bg-amber-500/15 text-amber-300')};
 $('bEngine').value=bEng;$('bEngine').onchange=e=>{bEng=e.target.value;store.set('uvEngine',bEng)};
 $('toggleBookBar').checked=bBar;$('toggleBookBar').onchange=e=>{bBar=e.target.checked;store.set('uvBar',bBar);renderBookBar()};
 $('bClearHist').onclick=()=>{bHist.length=0;saveB();renderNewPage()};

@@ -20,6 +20,19 @@ The proxy needs a host that runs Node and allows WebSockets. A static host
   A `Dockerfile` is included too. The host provides PORT automatically.
 Use the https address it gives you. Service workers need HTTPS (localhost is exempt).
 
+## Speed
+The Browser has two engines (Settings > Browser > Proxy engine):
+- **Auto (default):** uses **Scramjet**, the newer and faster proxy, and switches to
+  **Ultraviolet** by itself if Scramjet isn't available on the server.
+- Scramjet or Ultraviolet: force one. If a site looks broken on one, try the other.
+
+Things that make the biggest difference to speed:
+- **Render's free plan sleeps** after 15 minutes without visitors, and the first load
+  then takes up to a minute. A free uptime pinger (for example UptimeRobot) that opens
+  your site every 5 minutes keeps it awake.
+- **Pick the Render region nearest to you** when you create the service.
+- Free hosts are slow for video and heavy sites. Lighter pages are much faster.
+
 ## Troubleshooting
 - Browser says **Proxy offline**: you opened `index.html` as a file or from a static host.
   Open the address of this Node server instead.
@@ -35,5 +48,5 @@ Use the https address it gives you. Service workers need HTTPS (localhost is exe
 - `public/sw.js`, `public/uv/uv.config.js`  Ultraviolet service worker + settings
 - `src/index.js`  serves everything and the /wisp/ socket the proxy uses
 
-Ultraviolet, bare-mux and Epoxy are by Titanium Network / Mercury Workshop.
+Ultraviolet (Titanium Network) and Scramjet, bare-mux, Epoxy and libcurl-transport (Mercury Workshop).
 Check their licenses before publishing a public site.
