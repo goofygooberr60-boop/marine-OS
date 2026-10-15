@@ -113,6 +113,48 @@ body.perf *{animation:none!important;transition:none!important;backdrop-filter:n
 body.perf .os-window,body.perf #startMenu,body.perf #contextMenu,body.perf #a11yPanel,body.perf #osk{background-color:#17171d!important}
 body.perf .dock-container,body.perf #osTopBar{background-color:#101015!important}
 
+/* Personalization, system and app preferences */
+:root{--pref-accent:#f97316;--pref-accent-alpha:.85;--pref-window-alpha:.94;--pref-window-radius:12px;--pref-window-blur:18px}
+.settings-pref-group{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:8px 18px;margin:0 0 16px}
+.settings-pref-group h3{font-size:15px;font-weight:700;color:#e2e8f0;padding:10px 0}
+.settings-pref-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid rgba(255,255,255,.06)}
+.settings-pref-row:first-of-type{border-top:0}
+.settings-pref-copy{min-width:0;flex:1}
+.settings-pref-control{flex:0 0 auto;max-width:260px;background:#111113;color:#f8fafc;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:8px 10px}
+.settings-pref-row input[type=range]{accent-color:var(--pref-accent);width:150px}
+.settings-pref-row input[type=color]{width:48px;height:36px;padding:3px;cursor:pointer}
+.settings-pref-row input[type=checkbox]{width:19px;height:19px;accent-color:var(--pref-accent);cursor:pointer}
+.settings-pref-description{color:#94a3b8;font-size:12px;margin-top:3px;line-height:1.45}
+.settings-pref-value{color:#cbd5e1;font-size:12px;min-width:45px;text-align:right;font-variant-numeric:tabular-nums}
+.settings-pref-action{background:rgba(255,255,255,.1);color:#e2e8f0;border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}
+.settings-pref-action:hover{background:rgba(255,255,255,.18)}
+body.prefs-light{color:#20232a}
+body.prefs-light #osTopBar{background:rgba(245,247,250,.92)!important;color:#1f2937!important;border-bottom:1px solid rgba(15,23,42,.12)}
+body.prefs-light .dock-container{background:rgba(245,247,250,.92)!important;border-color:rgba(15,23,42,.14)!important}
+body.prefs-light .os-window{background-color:rgba(246,248,252,var(--pref-window-alpha))!important;color:#1f2937}
+body.prefs-light .window-header{background-color:#e6e9ef!important;color:#1f2937!important;border-color:rgba(15,23,42,.12)!important}
+body.prefs-light #settingsWindow .settings-tab h2,body.prefs-light #settingsWindow .settings-pref-group h3{color:#111827!important}
+body.prefs-light #settingsWindow .settings-pref-copy,body.prefs-light #settingsWindow .settings-pref-copy .text-slate-200,body.prefs-light #settingsWindow .settings-pref-copy .text-white{color:#334155!important}
+body.prefs-light #settingsWindow .settings-pref-control{background:#fff;color:#111827;border-color:#cbd5e1}
+body.prefs-light .dock-item>span{background:#fff!important;color:#1f2937!important}
+body.prefs-hide-icons #desktop-icons{display:none!important}
+body.prefs-hide-icon-labels .desk-icon>span{display:none!important}
+body.prefs-hide-dock-labels .dock-item>span{display:none!important}
+body.prefs-no-address #uvAddress{filter:blur(5px)}
+body.prefs-compact-tabs #uvTabs>div{height:30px!important;min-width:86px!important;max-width:145px!important;font-size:10px!important}
+body.prefs-density-compact .settings-pref-row{padding:7px 0}
+body.prefs-density-spacious .settings-pref-row{padding:17px 0}
+body.prefs-no-animations *,body.prefs-no-animations *::before,body.prefs-no-animations *::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}
+body.prefs-window-style .os-window{background-color:rgba(21,21,27,var(--pref-window-alpha))!important;border-radius:var(--pref-window-radius)!important;backdrop-filter:blur(var(--pref-window-blur))!important;-webkit-backdrop-filter:blur(var(--pref-window-blur))!important}
+body.prefs-no-shadow .os-window{box-shadow:none!important}
+html.prefs-accent-color .settings-tab-btn.active,html.prefs-accent-color .dock-item.is-open .dock-indicator{background-color:color-mix(in srgb,var(--pref-accent) calc(var(--pref-accent-alpha)*100%),transparent)!important}
+html.prefs-accent-color .text-orange-400,html.prefs-accent-color .text-orange-500,html.prefs-accent-color .accent-orange-500{color:var(--pref-accent)!important;accent-color:var(--pref-accent)!important}
+html.prefs-accent-color button.bg-orange-600{background-color:var(--pref-accent)!important}
+html.prefs-accent-color .settings-tab-btn.active{border-left:3px solid var(--pref-accent)}
+body.prefs-no-topbar #osTopBar{display:none!important}
+body.prefs-no-topbar #desktop{padding-top:0!important}
+body.prefs-hide-clock #osClock{display:none!important}
+body.prefs-glass .os-window{backdrop-filter:blur(var(--pref-window-blur))!important;-webkit-backdrop-filter:blur(var(--pref-window-blur))!important}
 </style>
 </head>
 <body class="h-screen w-screen overflow-hidden text-white" style="font-family: var(--font-body); background-image: url('https://files.cdn-files-a.com/uploads/12421333/2000_gi-6abdd63847b35.jpg?format=avif'); background-size: cover; background-position: center; background-repeat: no-repeat;">
@@ -1575,48 +1617,6 @@ applyCloak(cloak||{});
 function openCloaked(){if(self!==top){alert('This tab is already cloaked.');return}
  const t=(cloak&&cloak.t)||document.title,i=(cloak&&cloak.i)||DEF.i,mode=$('cloakMode').value;
  const doc=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(t)}</title><link rel="icon" href="${esc(i)}"><style>html,body{margin:0;height:100%;overflow:hidden;background:#000}iframe{border:0;width:100%;height:100%}
-/* Personalization, system and app preferences */
-:root{--pref-accent:#f97316;--pref-accent-alpha:.85;--pref-window-alpha:.94;--pref-window-radius:12px;--pref-window-blur:18px}
-.settings-pref-group{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:8px 18px;margin:0 0 16px}
-.settings-pref-group h3{font-size:15px;font-weight:700;color:#e2e8f0;padding:10px 0}
-.settings-pref-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid rgba(255,255,255,.06)}
-.settings-pref-row:first-of-type{border-top:0}
-.settings-pref-copy{min-width:0;flex:1}
-.settings-pref-control{flex:0 0 auto;max-width:260px;background:#111113;color:#f8fafc;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:8px 10px}
-.settings-pref-row input[type=range]{accent-color:var(--pref-accent);width:150px}
-.settings-pref-row input[type=color]{width:48px;height:36px;padding:3px;cursor:pointer}
-.settings-pref-row input[type=checkbox]{width:19px;height:19px;accent-color:var(--pref-accent);cursor:pointer}
-.settings-pref-description{color:#94a3b8;font-size:12px;margin-top:3px;line-height:1.45}
-.settings-pref-value{color:#cbd5e1;font-size:12px;min-width:45px;text-align:right;font-variant-numeric:tabular-nums}
-.settings-pref-action{background:rgba(255,255,255,.1);color:#e2e8f0;border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}
-.settings-pref-action:hover{background:rgba(255,255,255,.18)}
-body.prefs-light{color:#20232a}
-body.prefs-light #osTopBar{background:rgba(245,247,250,.92)!important;color:#1f2937!important;border-bottom:1px solid rgba(15,23,42,.12)}
-body.prefs-light .dock-container{background:rgba(245,247,250,.92)!important;border-color:rgba(15,23,42,.14)!important}
-body.prefs-light .os-window{background-color:rgba(246,248,252,var(--pref-window-alpha))!important;color:#1f2937}
-body.prefs-light .window-header{background-color:#e6e9ef!important;color:#1f2937!important;border-color:rgba(15,23,42,.12)!important}
-body.prefs-light #settingsWindow .settings-tab h2,body.prefs-light #settingsWindow .settings-pref-group h3{color:#111827!important}
-body.prefs-light #settingsWindow .settings-pref-copy,body.prefs-light #settingsWindow .settings-pref-copy .text-slate-200,body.prefs-light #settingsWindow .settings-pref-copy .text-white{color:#334155!important}
-body.prefs-light #settingsWindow .settings-pref-control{background:#fff;color:#111827;border-color:#cbd5e1}
-body.prefs-light .dock-item>span{background:#fff!important;color:#1f2937!important}
-body.prefs-hide-icons #desktop-icons{display:none!important}
-body.prefs-hide-icon-labels .desk-icon>span{display:none!important}
-body.prefs-hide-dock-labels .dock-item>span{display:none!important}
-body.prefs-no-address #uvAddress{filter:blur(5px)}
-body.prefs-compact-tabs #uvTabs>div{height:30px!important;min-width:86px!important;max-width:145px!important;font-size:10px!important}
-body.prefs-density-compact .settings-pref-row{padding:7px 0}
-body.prefs-density-spacious .settings-pref-row{padding:17px 0}
-body.prefs-no-animations *,body.prefs-no-animations *::before,body.prefs-no-animations *::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}
-body.prefs-window-style .os-window{background-color:rgba(21,21,27,var(--pref-window-alpha))!important;border-radius:var(--pref-window-radius)!important;backdrop-filter:blur(var(--pref-window-blur))!important;-webkit-backdrop-filter:blur(var(--pref-window-blur))!important}
-body.prefs-no-shadow .os-window{box-shadow:none!important}
-html.prefs-accent-color .settings-tab-btn.active,html.prefs-accent-color .dock-item.is-open .dock-indicator{background-color:color-mix(in srgb,var(--pref-accent) calc(var(--pref-accent-alpha)*100%),transparent)!important}
-html.prefs-accent-color .text-orange-400,html.prefs-accent-color .text-orange-500,html.prefs-accent-color .accent-orange-500{color:var(--pref-accent)!important;accent-color:var(--pref-accent)!important}
-html.prefs-accent-color button.bg-orange-600{background-color:var(--pref-accent)!important}
-html.prefs-accent-color .settings-tab-btn.active{border-left:3px solid var(--pref-accent)}
-body.prefs-no-topbar #osTopBar{display:none!important}
-body.prefs-no-topbar #desktop{padding-top:0!important}
-body.prefs-hide-clock #osClock{display:none!important}
-body.prefs-glass .os-window{backdrop-filter:blur(var(--pref-window-blur))!important;-webkit-backdrop-filter:blur(var(--pref-window-blur))!important}
 </style></head><body><iframe src="${esc(location.href.split('#')[0])}" allow="fullscreen;autoplay;clipboard-write"></iframe></body></html>`;
  let w;
  if(mode==='blob')w=window.open(URL.createObjectURL(new Blob([doc],{type:'text/html'})),'_blank');
