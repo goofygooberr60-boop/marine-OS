@@ -2382,5 +2382,571 @@ if(window.matchMedia){const mq=matchMedia('(prefers-color-scheme: light)');if(mq
 applyMarinePrefs();
 setInterval(updateMarineClock,1000);
 </script>
+
+<style id="marine-desktop-features">
+/* Marine OS desktop additions */
+.marine-popover{
+ position:fixed;z-index:100020;min-width:205px;max-width:min(290px,calc(100vw - 16px));
+ padding:6px;border:1px solid rgba(164,202,194,.22);border-radius:14px;
+ background:rgba(7,24,31,.97);color:#e8f1ee;box-shadow:0 18px 55px rgba(0,0,0,.42);
+ backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)
+}
+.marine-popover button{
+ display:flex;width:100%;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
+ color:#dce9e5;text-align:left;font-size:13px;transition:background .15s,color .15s
+}
+.marine-popover button:hover,.marine-popover button:focus-visible{background:rgba(118,185,169,.16);color:#fff;outline:none}
+.marine-popover button i{width:16px;text-align:center;color:#8fc5b9}
+.marine-menu-separator{height:1px;margin:5px 4px;background:rgba(255,255,255,.09)}
+.marine-start-hint{margin:18px 4px 0;color:#91aaa5;font-size:11px;letter-spacing:.01em}
+.marine-start-recent{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 16px;padding:0 8px}
+.marine-start-recent button{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.035);color:#d8e5e1;font-size:11px}
+.marine-start-recent button:hover{background:rgba(118,185,169,.13)}
+.marine-app-section{margin:0 0 18px}
+.marine-app-section h4{margin:0 8px 9px;color:#90aaa4;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.marine-app-tile{min-width:0}
+.marine-app-tile>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.marine-app-tile .marine-tile-icon{border:1px solid rgba(173,207,199,.13);background:linear-gradient(145deg,rgba(118,185,169,.19),rgba(22,53,61,.55));color:#b7ddd3}
+.marine-start-search-result{display:flex;width:100%;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#e6efec;text-align:left}
+.marine-start-search-result:hover{background:rgba(118,185,169,.13)}
+.marine-start-search-result>i:first-child{width:22px;color:#91c8bc;text-align:center}
+.marine-start-search-result small{display:block;margin-top:2px;color:#91a6a1;font-size:11px}
+#marineSettingsResults{position:absolute;z-index:25;top:78px;left:12px;right:12px;max-height:min(56vh,430px);overflow:auto;padding:5px;border:1px solid rgba(164,202,194,.2);border-radius:12px;background:rgba(7,24,31,.98);box-shadow:0 15px 40px rgba(0,0,0,.38)}
+#marineSettingsResults:empty{display:none}
+#marineSettingsResults button{display:block;width:100%;padding:8px;border-radius:8px;color:#e3eeea;text-align:left}
+#marineSettingsResults button:hover{background:rgba(118,185,169,.14)}
+#marineSettingsResults small{display:block;margin-top:2px;color:#91aaa5;font-size:10px}
+.marine-snap-trigger{display:inline-flex!important;align-items:center;justify-content:center;width:25px;height:25px;border-radius:7px;color:#a8c2bc!important}
+.marine-snap-trigger:hover{background:rgba(118,185,169,.15);color:#ecf8f4!important}
+#marineSnapPreview{position:fixed;z-index:100010;pointer-events:none;border:1px solid rgba(141,205,190,.62);border-radius:15px;background:rgba(78,145,132,.22);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),0 10px 35px rgba(0,0,0,.22);transition:all .12s ease}
+#marineWindowSwitcher{position:fixed;inset:0;z-index:100005;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(2,12,16,.52);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.marine-switcher-panel{width:min(780px,94vw);max-height:min(76vh,560px);overflow:auto;padding:22px;border:1px solid rgba(164,202,194,.2);border-radius:20px;background:rgba(8,25,32,.97);box-shadow:0 25px 75px rgba(0,0,0,.5)}
+.marine-switcher-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.marine-switcher-card{display:flex;min-height:84px;align-items:center;gap:12px;padding:13px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(255,255,255,.035);color:#dfebe7;text-align:left}
+.marine-switcher-card:hover,.marine-switcher-card.active{border-color:rgba(143,197,185,.55);background:rgba(118,185,169,.14)}
+.marine-switcher-card i{color:#9fcfc3;font-size:20px}
+.marine-switcher-card span{overflow:hidden;text-overflow:ellipsis}
+.marine-snapped{border-radius:12px!important}
+body.prefs-icons-glass .desk-icon .ico{background:linear-gradient(145deg,rgba(143,197,185,.4),rgba(23,52,60,.82))!important;border:1px solid rgba(197,231,222,.3);backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
+body.prefs-icons-outline .desk-icon .ico{background:rgba(9,28,35,.55)!important;border:1px solid rgba(166,211,200,.68);color:#bde3d9!important;box-shadow:none}
+body.prefs-icons-round .desk-icon .ico{border-radius:50%!important}
+body.prefs-icons-minimal .desk-icon .ico{background:rgba(10,29,36,.7)!important;border:1px solid rgba(255,255,255,.09);box-shadow:none;color:#a8d3c8!important}
+body.prefs-wallpaper-abyss{background-image:radial-gradient(ellipse at 73% 18%,rgba(48,106,121,.52),transparent 45%),linear-gradient(145deg,#071a25,#0a3039 55%,#071820)!important}
+body.prefs-wallpaper-kelp{background-image:radial-gradient(ellipse at 22% 76%,rgba(67,112,86,.34),transparent 42%),linear-gradient(135deg,#0a201e,#18382f 55%,#081c23)!important}
+body.prefs-wallpaper-harbor{background-image:radial-gradient(ellipse at 77% 18%,rgba(190,130,96,.3),transparent 43%),linear-gradient(145deg,#18242c,#35444a 56%,#17212a)!important}
+body.prefs-wallpaper-tide{background-image:radial-gradient(ellipse at 25% 25%,rgba(74,153,145,.35),transparent 42%),linear-gradient(140deg,#08252d,#12454c 55%,#0a2930)!important}
+body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg,body.prefs-wallpaper-harbor #lockScreenBg,body.prefs-wallpaper-tide #lockScreenBg{background-image:inherit!important}
+.dock-container{scrollbar-width:none}
+.dock-container::-webkit-scrollbar{display:none}
+.marine-dock-extra{display:contents}
+.marine-dock-extra .dock-item{flex:0 0 auto}
+@media(max-width:760px){
+ .dock-container{left:8px!important;right:8px!important;bottom:8px!important;transform:none!important;width:auto!important;max-width:none!important;height:66px!important;overflow-x:auto!important;justify-content:flex-start!important;border-radius:17px!important;padding-left:8px!important;padding-right:8px!important}
+ .dock-container>div:nth-child(2){display:none}
+ .dock-container>.dock-item button,.marine-dock-extra .dock-item button{width:42px!important;height:42px!important;font-size:19px!important}
+ #startMenu{left:8px!important;right:8px!important;bottom:82px!important;transform:none!important;width:auto!important;max-width:none!important;height:min(70vh,620px)!important;padding:16px!important}
+ #startMenu #startPinnedGrid,#marineStartAllGrid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}
+ .os-window{position:fixed!important;left:0!important;right:0!important;top:34px!important;bottom:78px!important;width:auto!important;height:auto!important;max-width:none!important;max-height:none!important;border-radius:14px 14px 0 0!important}
+ #settingsWindow>.flex-1{min-height:0}
+ #settingsWindow>.flex-1>.w-60{width:132px!important;min-width:132px!important;padding:8px!important}
+ #settingsWindow .settings-tab-btn{gap:7px!important;padding:9px 7px!important;font-size:10px!important}
+ #settingsWindow .settings-tab-btn i{width:14px!important}
+ #settingsWindow .settings-pref-row{align-items:flex-start;flex-direction:column;gap:8px}
+ #settingsWindow .settings-pref-control{max-width:100%!important}
+ #settingsWindow .settings-pref-row input[type=range]{max-width:55vw}
+ #settingsWindow .settings-pref-row input[type=text]{width:min(220px,55vw)!important}
+ #storeWindow .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #uvStatus{display:none!important}
+ #uvTabs{min-width:0}
+ #uvTabs>[role=tab]{min-width:84px!important}
+ #browserWindow .window-header{padding-left:10px!important;padding-right:10px!important}
+ #browserWindow .window-header .text-sm{font-size:11px!important}
+ #osTopBar{max-width:100vw;overflow:hidden}
+ .marine-switcher-panel{padding:14px}
+ .marine-switcher-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+ #startMenu{padding:12px!important}
+ #startPinnedGrid,#marineStartAllGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ #settingsWindow>.flex-1>.w-60{width:112px!important;min-width:112px!important}
+ #settingsWindow .settings-tab-btn{font-size:9px!important}
+ .marine-start-recent{gap:5px}
+ .marine-start-recent button{font-size:10px;padding:6px}
+}
+@media(max-height:560px){
+ #startMenu{height:calc(100vh - 100px)!important;max-height:none!important}
+ .dock-container{bottom:5px!important;height:58px!important}
+ .os-window{top:30px!important;bottom:66px!important}
+}
+
+</style>
+<script id="marine-desktop-features-script">
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const qsa=(s,r=document)=>Array.from(r.querySelectorAll(s));
+ const escapeHtml=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const keyFor=item=>{
+  const app=APPS.find(a=>a.name===item.name);
+  if(app)return 'app:'+app.id;
+  if(TOOLS.some(t=>t.name===item.name))return 'tool:'+encodeURIComponent(item.name);
+  return 'game:'+encodeURIComponent(item.name);
+ };
+ const items=()=>allItems();
+ const itemForKey=k=>items().find(i=>keyFor(i)===k);
+ const appById=id=>APPS.find(a=>a.id===id);
+ const loadList=(name,fallback)=>{const v=store.get(name,null);return Array.isArray(v)?v:fallback.slice()};
+ const defaultDock=APPS.filter(a=>['codeWindow','storeWindow','chatWindow','browserWindow','aiWindow','settingsWindow'].includes(a.id)).map(a=>'app:'+a.id);
+ let taskbarPins=loadList('taskbarPins',defaultDock);
+ let startPins=loadList('startPins',items().slice(0,18).map(keyFor));
+ let recentItems=loadList('marineRecent',[]);
+ const savePins=()=>store.set('taskbarPins',taskbarPins);
+ const saveStartPins=()=>store.set('startPins',startPins);
+ const saveRecent=()=>store.set('marineRecent',recentItems);
+
+ /* Add practical visual choices to the existing settings store. */
+ selectPref('personalization','Desktop icons','iconStyle','Desktop icon style','Choose a quieter glass, outline, or round icon finish.','glass',opts([['classic','Original tiles'],['glass','Sea glass'],['outline','Fine outline'],['round','Round'],['minimal','Minimal']]));
+ selectPref('personalization','Background','wallpaperPreset','Marine wallpaper','Use a built-in ocean color scene or keep your own image.','custom',opts([['custom','My wallpaper'],['abyss','North Atlantic'],['tide','Tide pool'],['kelp','Kelp forest'],['harbor','Harbor dusk']]));
+ ['iconStyle','wallpaperPreset'].forEach(id=>{const d=marinePrefDefs.find(x=>x.id===id);if(d&&marinePrefs[id]===undefined)marinePrefs[id]=d.value});
+ store.set('prefSettings',marinePrefs);
+ const wallpaperClasses=['custom','abyss','tide','kelp','harbor'];
+ function applyMarineVisualChoices(){
+  const body=document.body;
+  wallpaperClasses.forEach(x=>body.classList.remove('prefs-wallpaper-'+x));
+  body.classList.add('prefs-wallpaper-'+(marinePrefs.wallpaperPreset||'custom'));
+  ['classic','glass','outline','round','minimal'].forEach(x=>body.classList.remove('prefs-icons-'+x));
+  body.classList.add('prefs-icons-'+(marinePrefs.iconStyle||'glass'));
+  if(marinePrefs.wallpaperPreset==='custom')updateMarineWallpaper();
+  else{
+   const style=getComputedStyle(body);
+   const image=style.backgroundImage;
+   const lock=$('lockScreenBg');
+   if(lock)lock.style.backgroundImage=image;
+  }
+ }
+ const marineBaseApplyPrefs=applyMarinePrefs;
+ applyMarinePrefs=function(){marineBaseApplyPrefs();applyMarineVisualChoices()};
+ renderMarinePrefPages();
+ applyMarinePrefs();
+
+ /* Settings search: filters the real settings catalogue and jumps to its control. */
+ const categoryTab={personalization:'personalization',system:'systemprefs',apps:'apps',time:'time',gaming:'gaming',privacy:'privacy'};
+ const settingsNav=qsa('#settingsWindow .settings-tab-btn');
+ const navList=settingsNav.find(b=>b.parentElement&&b.parentElement.tagName==='NAV');
+ if(navList){
+  const sidebar=navList.parentElement;
+  sidebar.style.position='relative';
+  const search=document.createElement('input');
+  search.id='marineSettingsSearch';search.type='search';search.placeholder='Find a setting';search.autocomplete='off';
+  search.setAttribute('aria-label','Find a setting');
+  search.style.cssText='width:100%;height:36px;margin:0 0 10px;padding:0 11px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(5,19,25,.7);color:#eef6f3;font-size:12px;outline:none';
+  navList.parentElement.insertBefore(search,navList);
+  const resultBox=document.createElement('div');resultBox.id='marineSettingsResults';sidebar.append(resultBox);
+  const settingDefs=marinePrefDefs.slice();
+  const tabDefs=settingsNav.map(b=>({label:b.textContent.trim(),description:'Open settings category',target:b.dataset.target}));
+  const openSetting=(def)=>{
+   search.value='';resultBox.replaceChildren();
+   if(def.target){const b=settingsNav.find(x=>x.dataset.target===def.target);if(b)b.click();return}
+   openWindow('settingsWindow','Settings');
+   const button=settingsNav.find(x=>x.dataset.target==='tab-'+(categoryTab[def.category]||def.category));
+   if(button)button.click();
+   setTimeout(()=>{const control=$('marine-pref-'+def.id),row=control?control.closest('.settings-pref-row'):null,node=row||control;if(node){node.scrollIntoView({block:'center',behavior:marinePrefs.reduceMotion?'auto':'smooth'});if(control&&control.focus)control.focus({preventScroll:true})}},80);
+  };
+  search.addEventListener('input',()=>{
+   const query=search.value.trim().toLowerCase();resultBox.replaceChildren();
+   if(!query)return;
+   const matches=[];
+   tabDefs.forEach(d=>{if((d.label+' '+d.description).toLowerCase().includes(query))matches.push(d)});
+   settingDefs.forEach(d=>{if((d.label+' '+d.group+' '+d.description+' '+(marinePrefGroups[d.category]||'')).toLowerCase().includes(query))matches.push(d)});
+   matches.slice(0,14).forEach(d=>{
+    const b=document.createElement('button');b.type='button';
+    b.append(document.createTextNode(d.label));
+    const small=document.createElement('small');small.textContent=d.target?'Settings category':(marinePrefGroups[d.category]||d.group)+' · '+d.group;b.append(small);
+    b.addEventListener('click',()=>openSetting(d));resultBox.append(b);
+   });
+   if(!matches.length){const empty=document.createElement('div');empty.style.cssText='padding:10px;color:#9bb0aa;font-size:12px';empty.textContent='No settings found';resultBox.append(empty)}
+  });
+  document.addEventListener('pointerdown',e=>{if(!sidebar.contains(e.target))resultBox.replaceChildren()});
+ }
+
+ /* Start menu and app library use saved pins instead of a hard-coded first page. */
+ const start=$('startMenu'),pinnedGrid=$('startPinnedGrid'),defaultView=$('startDefaultView'),resultsView=$('searchResultsView'),resultsGrid=$('searchResultsGrid'),searchInput=$('startSearchInput');
+ if(start&&pinnedGrid&&searchInput){
+  const scrollArea=defaultView.parentElement;
+  const allView=document.createElement('section');allView.id='marineStartAllView';allView.className='hidden';
+  allView.innerHTML='<h3 class="text-sm font-bold text-white mb-4 px-2">All apps</h3><div id="marineStartAllGrid"></div>';
+  scrollArea.append(allView);
+  const recentBlock=document.createElement('div');recentBlock.className='marine-start-recent';recentBlock.id='marineStartRecent';
+  pinnedGrid.parentElement.append(recentBlock);
+  const hint=document.createElement('p');hint.className='marine-start-hint';hint.textContent='Right-click an app to pin it to Start or the taskbar.';
+  defaultView.append(hint);
+  const head=defaultView.querySelector(':scope > .flex');
+  const allButton=head&&head.querySelector('button');
+  let allMode=false;
+  const makeTile=(it)=>{
+   const b=document.createElement('button');b.type='button';b.className='marine-app-tile flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-white/10 transition-colors text-xs text-slate-200 cursor-pointer';
+   b.dataset.marineKey=keyFor(it);b.title=it.name;
+   const ico=document.createElement('div');ico.className='marine-tile-icon w-11 h-11 rounded-xl flex items-center justify-center text-xl';const icon=document.createElement('i');icon.className=it.icon;ico.append(icon);
+   const label=document.createElement('span');label.className='text-center leading-tight';label.textContent=it.name;b.append(ico,label);
+   b.addEventListener('click',()=>runItem(it));return b;
+  };
+  const renderRecent=()=>{
+   recentBlock.replaceChildren();
+   recentItems.map(itemForKey).filter(Boolean).slice(0,4).forEach(it=>{
+    const b=document.createElement('button');b.dataset.marineKey=keyFor(it);b.title=it.name;
+    const ico=document.createElement('i');ico.className=it.icon;b.append(ico,document.createTextNode(it.name));
+    b.addEventListener('click',()=>runItem(it));recentBlock.append(b);
+   });
+   recentBlock.classList.toggle('hidden',!recentBlock.children.length);
+  };
+  const renderStartPinned=()=>{
+   const available=items(),keys=startPins.filter(k=>available.some(i=>keyFor(i)===k));
+   pinnedGrid.replaceChildren();
+   keys.forEach(k=>{const it=itemForKey(k);if(it)pinnedGrid.append(makeTile(it))});
+   if(!keys.length){const empty=document.createElement('p');empty.className='col-span-full px-3 py-6 text-center text-sm text-slate-400';empty.textContent='Nothing pinned yet. Open All apps and right-click a favorite.';pinnedGrid.append(empty)}
+   renderRecent();
+  };
+  const renderAllApps=()=>{
+   const grid=$('marineStartAllGrid');grid.replaceChildren();
+   const groups=[['Marine apps',APPS.map(a=>({name:a.name,icon:a.icon,run:()=>openWindow(a.id,a.name)}))],['Utilities',TOOLS.map(t=>({name:t.name,icon:t.icon,run:()=>openGeneric(t.name,t.icon,null,t.html)}))],['Games',catalog().map(g=>({name:g.name,icon:g.icon,run:()=>launchGame(g.name,g.url,g.proxy)}))]];
+   groups.forEach(pair=>{
+    if(!pair[1].length)return;
+    const section=document.createElement('section');section.className='marine-app-section';
+    const title=document.createElement('h4');title.textContent=pair[0];section.append(title);
+    const row=document.createElement('div');row.className='grid grid-cols-4 sm:grid-cols-6 gap-3';pair[1].forEach(it=>row.append(makeTile(it)));section.append(row);grid.append(section);
+   });
+  };
+  const setAllMode=on=>{
+   allMode=!!on;defaultView.classList.toggle('hidden',allMode);allView.classList.toggle('hidden',!allMode);
+   if(allButton){allButton.textContent=allMode?'Pinned':'All apps';allButton.title=allMode?'Show pinned apps':'Browse every app and game'}
+  };
+  if(allButton)allButton.onclick=()=>setAllMode(!allMode);
+  const viewButton=document.createElement('button');viewButton.type='button';viewButton.className='text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors';
+  viewButton.innerHTML='<i class="fa-solid fa-table-cells-large mr-1"></i> Windows';
+  viewButton.title='Switch between open windows';viewButton.addEventListener('click',()=>showSwitcher(false));
+  if(head)head.append(viewButton);
+  renderPinned=renderStartPinned;
+  const filterSearch=()=>{
+   const query=searchInput.value.trim().toLowerCase();resultsGrid.replaceChildren();
+   setAllMode(false);
+   defaultView.classList.toggle('hidden',!!query);allView.classList.add('hidden');resultsView.classList.toggle('hidden',!query);
+   if(!query)return;
+   const appMatches=items().filter(it=>it.name.toLowerCase().includes(query)).slice(0,20);
+   appMatches.forEach(it=>resultsGrid.append(makeSearchResult(it.name,it.icon,'App · right-click to pin',()=>runItem(it),keyFor(it))));
+   marinePrefDefs.filter(d=>(d.label+' '+d.group+' '+d.description).toLowerCase().includes(query)).slice(0,10).forEach(d=>{
+    const tab=categoryTab[d.category]||d.category;
+    resultsGrid.append(makeSearchResult(d.label,'fa-solid fa-gear',(marinePrefGroups[d.category]||d.group)+' · Setting',()=>{hideStart();openWindow('settingsWindow','Settings');const b=settingsNav.find(x=>x.dataset.target==='tab-'+tab);if(b)b.click();setTimeout(()=>{const c=$('marine-pref-'+d.id);if(c){const r=c.closest('.settings-pref-row')||c;r.scrollIntoView({block:'center'});c.focus({preventScroll:true})}},80)},null));
+   });
+   if(!resultsGrid.children.length){const p=document.createElement('p');p.className='col-span-2 px-2 py-4 text-sm text-slate-400';p.textContent='No apps or settings found.';resultsGrid.append(p)}
+  };
+  document.addEventListener('input',e=>{if(e.target===searchInput){e.stopImmediatePropagation();filterSearch()}},true);
+  function makeSearchResult(title,icon,detail,run,key){
+   const b=document.createElement('button');b.type='button';b.className='marine-start-search-result';if(key)b.dataset.marineKey=key;
+   const ico=document.createElement('i');ico.className=icon;
+   const text=document.createElement('span');text.textContent=title;
+   const small=document.createElement('small');small.textContent=detail;text.append(small);
+   b.append(ico,text);b.addEventListener('click',run);return b;
+  }
+  const originalToggle=toggleStartMenu;
+  toggleStartMenu=function(){if(!smOpen){setAllMode(false);searchInput.value='';resultsView.classList.add('hidden');defaultView.classList.remove('hidden');renderStartPinned()}originalToggle()};
+  showStart=function(){setAllMode(false);searchInput.value='';resultsView.classList.add('hidden');renderStartPinned();smOpen=true;start.classList.remove('hidden');requestAnimationFrame(()=>start.classList.remove('translate-y-4','opacity-0'));};
+  renderAllApps();
+  start.dataset.marineStartReady='1';
+  window.marineStartRender=()=>{renderStartPinned();renderAllApps()};
+ }else{
+  window.marineStartRender=()=>{};
+ }
+
+ /* Recent apps are recorded by the existing launch paths. */
+ function recordRecent(key){
+  if(!key)return;recentItems=[key].concat(recentItems.filter(x=>x!==key)).slice(0,6);saveRecent();
+  if(window.marineStartRender)window.marineStartRender();
+ }
+ function runItem(it){hideStart();recordRecent(keyFor(it));it.run()}
+ function marineWrapOpeners(){
+  const baseOpenWindow=openWindow;
+  openWindow=function(id,title){const a=appById(id);if(a)recordRecent('app:'+a.id);return baseOpenWindow(id,title)};
+  const baseOpenGeneric=openGeneric;
+  openGeneric=function(name,icon,url,html){recordRecent('tool:'+encodeURIComponent(name));return baseOpenGeneric(name,icon,url,html)};
+  const baseLaunchGame=launchGame;
+  launchGame=function(name,url,proxy){recordRecent('game:'+encodeURIComponent(name));return baseLaunchGame(name,url,proxy)};
+ }
+ marineWrapOpeners();
+
+ /* Right-click context menu for apps, game cards, desktop shortcuts and dock icons. */
+ const appMenu=document.createElement('div');appMenu.id='marineAppContext';appMenu.className='marine-popover hidden';appMenu.setAttribute('role','menu');document.body.append(appMenu);
+ function hideAppMenu(){appMenu.classList.add('hidden');appMenu.replaceChildren()}
+ function addMenuButton(label,icon,run){
+  const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitem');
+  const i=document.createElement('i');i.className=icon;b.append(i,document.createTextNode(label));
+  b.addEventListener('click',()=>{hideAppMenu();run()});appMenu.append(b);
+ }
+ function showAppMenu(event,it,source){
+  if(!it)return;event.preventDefault();event.stopPropagation();
+  appMenu.replaceChildren();
+  addMenuButton('Open '+it.name,'fa-solid fa-arrow-up-right-from-square',()=>runItem(it));
+  appMenu.append(Object.assign(document.createElement('div'),{className:'marine-menu-separator'}));
+  addMenuButton(startPins.includes(keyFor(it))?'Unpin from Start':'Pin to Start','fa-solid fa-thumbtack',()=>{
+   const k=keyFor(it);startPins=startPins.includes(k)?startPins.filter(x=>x!==k):[k].concat(startPins);saveStartPins();if(window.marineStartRender)window.marineStartRender()
+  });
+  addMenuButton(taskbarPins.includes(keyFor(it))?'Unpin from taskbar':'Pin to taskbar','fa-solid fa-thumbtack',()=>{
+   const k=keyFor(it);taskbarPins=taskbarPins.includes(k)?taskbarPins.filter(x=>x!==k):taskbarPins.concat(k);savePins();renderTaskbarPins()
+  });
+  appMenu.style.left=Math.max(8,Math.min(event.clientX,innerWidth-220))+'px';
+  appMenu.style.top=Math.max(8,Math.min(event.clientY,innerHeight-190))+'px';
+  appMenu.classList.remove('hidden');
+ }
+ function findItemForElement(el){
+  if(!el)return null;
+  const tagged=el.closest('[data-marine-key]');if(tagged)return itemForKey(tagged.dataset.marineKey);
+  const dock=el.closest('.dock-item[data-target]');if(dock){const a=appById(dock.dataset.target);if(a)return {name:a.name,icon:a.icon,run:()=>toggleApp(a.id,a.name)}}
+  const label=(el.innerText||el.textContent||'').replace(/\s+/g,' ').trim();
+  if(!label)return null;
+  return items().slice().sort((a,b)=>b.name.length-a.name.length).find(i=>label.includes(i.name))||null;
+ }
+ document.addEventListener('contextmenu',e=>{
+  const el=e.target.closest&&e.target.closest('[data-marine-key],.desk-icon,.dock-item,.store-app-card,.store-grid button,#storeSystemApps button,#storeCommunityApps button,#startPinnedGrid button,#marineStartAllGrid button');
+  if(!el)return;
+  const it=findItemForElement(el);if(it)showAppMenu(e,it,el);
+ },true);
+ document.addEventListener('click',e=>{if(!appMenu.contains(e.target))hideAppMenu()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){hideAppMenu();document.getElementById('marineSettingsResults')?.replaceChildren()}});
+ qsa('.desk-icon').forEach(el=>{
+  const label=(el.innerText||'').trim();const it=items().find(x=>x.name===label);
+  if(it)el.dataset.marineKey=keyFor(it);
+ });
+
+ /* The dock keeps permanent shortcuts and adds user-pinned utilities or games. */
+ const dock=document.querySelector('.dock-container');
+ let dynamicDock=document.getElementById('marineDynamicDock');
+ if(dock&&!dynamicDock){dynamicDock=document.createElement('div');dynamicDock.id='marineDynamicDock';dynamicDock.className='marine-dock-extra';dock.append(dynamicDock)}
+ function renderTaskbarPins(){
+  if(!dock)return;
+  const available=items();
+  qsa('.dock-item[data-target]',dock).forEach(el=>{
+   const a=appById(el.dataset.target),k=a?'app:'+a.id:'';
+   if(k)el.dataset.marineKey=k;
+   const w=el.dataset.target==='genericAppWindow'?$('genericAppWindow'):$(el.dataset.target);
+   const running=!!w&&!w.classList.contains('hidden');
+   el.style.display=(taskbarPins.includes(k)||running)?'':'none';
+  });
+  if(!dynamicDock)return;
+  dynamicDock.replaceChildren();
+  const staticKeys=new Set(qsa('.dock-item[data-target]',dock).map(el=>el.dataset.marineKey).filter(Boolean));
+  taskbarPins.filter(k=>!staticKeys.has(k)).forEach(k=>{
+   const it=available.find(i=>keyFor(i)===k);if(!it)return;
+   const wrap=document.createElement('div');wrap.className='relative group flex flex-col items-center justify-center dock-item';wrap.dataset.marineKey=k;wrap.dataset.dynamicDock='1';
+   const button=document.createElement('button');button.type='button';button.title=it.name;const size=Number(marinePrefs.dockIconSize||46);button.style.width=size+'px';button.style.height=size+'px';button.style.fontSize=Math.round(size*.44)+'px';
+   button.className='w-[46px] h-[46px] rounded-2xl text-white flex items-center justify-center text-xl shadow-lg hover:-translate-y-1 transition-transform cursor-pointer';
+   button.style.background='linear-gradient(145deg,rgba(118,185,169,.95),rgba(31,82,84,.98))';
+   const icon=document.createElement('i');icon.className=it.icon;button.append(icon);button.addEventListener('click',()=>runItem(it));
+   const dot=document.createElement('div');dot.className='dock-indicator w-1 h-1 bg-white/0 rounded-full mt-1.5';
+   const tooltip=document.createElement('span');tooltip.className='absolute -top-12 bg-[#0b2028] text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl border border-white/10 whitespace-nowrap z-50';tooltip.textContent=it.name;
+   wrap.append(button,dot,tooltip);dynamicDock.append(wrap);
+  });
+  if(window.marineStartRender)window.marineStartRender();
+ }
+ const marineBaseUpdateDock=updateDock;
+ updateDock=function(){marineBaseUpdateDock();renderTaskbarPins()};
+ renderTaskbarPins();
+ window.marinePinItem=(k,where)=>{
+  if(where==='start'){startPins=startPins.includes(k)?startPins.filter(x=>x!==k):[k].concat(startPins);saveStartPins();if(window.marineStartRender)window.marineStartRender()}
+  else{taskbarPins=taskbarPins.includes(k)?taskbarPins.filter(x=>x!==k):taskbarPins.concat(k);savePins();renderTaskbarPins()}
+ };
+
+ /* Window switcher, snap layouts, edge snapping and restore. */
+ const snapPreview=document.createElement('div');snapPreview.id='marineSnapPreview';snapPreview.className='hidden';document.body.append(snapPreview);
+ let snapped=new WeakMap(),dragWindow=null,dragPreview='';
+ const topOffset=()=>Math.max(30,document.getElementById('osTopBar')?.offsetHeight||34);
+ function saveWindowGeometry(w){
+  if(snapped.has(w))return;
+  snapped.set(w,{left:w.style.left,top:w.style.top,width:w.style.width,height:w.style.height,maxWidth:w.style.maxWidth,maxHeight:w.style.maxHeight,position:w.style.position,wasMax:w.classList.contains('maximized'),place:''});
+ }
+ function setSnapRect(w,place){
+  saveWindowGeometry(w);const top=topOffset(),h=Math.max(200,innerHeight-top),halfW=innerWidth/2,halfH=h/2;
+  w.classList.remove('maximized');w.classList.add('marine-snapped');w.dataset.marineSnap=place;
+  w.style.position='fixed';w.style.maxWidth='none';w.style.maxHeight='none';w.style.right='auto';w.style.bottom='auto';
+  let x=0,y=top,width=innerWidth,height=h;
+  if(place==='left'){width=halfW}
+  if(place==='right'){x=halfW;width=halfW}
+  if(place==='top-left'){width=halfW;height=halfH}
+  if(place==='top-right'){x=halfW;width=halfW;height=halfH}
+  if(place==='bottom-left'){y=top+halfH;width=halfW;height=halfH}
+  if(place==='bottom-right'){x=halfW;y=top+halfH;width=halfW;height=halfH}
+  if(place==='max'){x=0;y=top;width=innerWidth;height=h;w.classList.remove('marine-snapped');w.classList.add('maximized')}
+  w.style.left=x+'px';w.style.top=y+'px';w.style.width=width+'px';w.style.height=height+'px';focusWin(w.id);
+  const state=snapped.get(w);if(state)state.place=place;
+ }
+ function restoreWindow(w){
+  const state=snapped.get(w);
+  if(state){
+   w.classList.remove('marine-snapped','maximized');
+   w.style.left=state.left;w.style.top=state.top;w.style.width=state.width;w.style.height=state.height;
+   w.style.maxWidth=state.maxWidth;w.style.maxHeight=state.maxHeight;w.style.position=state.position;
+   if(state.wasMax)w.classList.add('maximized');
+   snapped.delete(w);
+  }else if(w.classList.contains('maximized'))w.classList.remove('maximized');
+  delete w.dataset.marineSnap;focusWin(w.id);
+ }
+ function snapWindow(w,place){if(!w)return;if(place==='restore'){restoreWindow(w);return}setSnapRect(w,place)}
+ function snapGeometry(place){
+  const top=topOffset(),h=innerHeight-top,halfW=innerWidth/2,halfH=h/2;
+  if(place==='left')return {x:0,y:top,w:halfW,h:h};
+  if(place==='right')return {x:halfW,y:top,w:halfW,h:h};
+  if(place==='top-left')return {x:0,y:top,w:halfW,h:halfH};
+  if(place==='top-right')return {x:halfW,y:top,w:halfW,h:halfH};
+  if(place==='bottom-left')return {x:0,y:top+halfH,w:halfW,h:halfH};
+  if(place==='bottom-right')return {x:halfW,y:top+halfH,w:halfW,h:halfH};
+  return {x:0,y:top,w:innerWidth,h:h};
+ }
+ function previewSnap(place){
+  dragPreview=place||'';if(!place){snapPreview.classList.add('hidden');return}
+  const r=snapGeometry(place);snapPreview.style.left=(r.x+5)+'px';snapPreview.style.top=(r.y+5)+'px';snapPreview.style.width=Math.max(0,r.w-10)+'px';snapPreview.style.height=Math.max(0,r.h-10)+'px';snapPreview.classList.remove('hidden')
+ }
+ function placeFromPoint(e){
+  if(e.clientY<18)return 'max';
+  const left=e.clientX<18,right=e.clientX>innerWidth-18,top=e.clientY<topOffset()+22,bottom=e.clientY>innerHeight-18;
+  if(left&&top)return 'top-left';if(right&&top)return 'top-right';if(left&&bottom)return 'bottom-left';if(right&&bottom)return 'bottom-right';if(left)return 'left';if(right)return 'right';
+  return '';
+ }
+ function openSnapMenu(event,w){
+  const menu=document.createElement('div');menu.id='marineSnapMenu';menu.className='marine-popover';
+  const choices=[['Snap left','left'],['Snap right','right'],['Top left quarter','top-left'],['Top right quarter','top-right'],['Bottom left quarter','bottom-left'],['Bottom right quarter','bottom-right'],['Maximize','max'],['Restore size','restore']];
+  choices.forEach(pair=>{
+   const b=document.createElement('button');b.type='button';const i=document.createElement('i');i.className='fa-solid '+(pair[1]==='restore'?'fa-arrow-rotate-left':pair[1]==='max'?'fa-expand':pair[1].includes('left')?'fa-table-columns':'fa-table-cells-large');
+   b.append(i,document.createTextNode(pair[0]));b.addEventListener('click',()=>{menu.remove();snapWindow(w,pair[1])});menu.append(b)
+  });
+  menu.style.left=Math.max(8,Math.min(event.clientX,innerWidth-220))+'px';menu.style.top=Math.max(8,Math.min(event.clientY,innerHeight-280))+'px';document.body.append(menu);
+  setTimeout(()=>document.addEventListener('pointerdown',function close(e){if(!menu.contains(e.target)){menu.remove();document.removeEventListener('pointerdown',close)}},{once:true}),0);
+ }
+ qsa('.os-window').forEach(w=>{
+  const header=w.querySelector('.window-header'),actions=header&&Array.from(header.children).find(x=>x.classList.contains('flex')&&x.querySelector('button'));
+  if(actions&&!actions.querySelector('.marine-snap-trigger')){
+   const b=document.createElement('button');b.type='button';b.className='marine-snap-trigger';b.title='Snap window';b.setAttribute('aria-label','Snap window');b.innerHTML='<i class="fa-solid fa-table-cells-large text-xs"></i>';
+   b.addEventListener('click',e=>{e.stopPropagation();openSnapMenu(e,w)});actions.insertBefore(b,actions.firstChild)
+  }
+ });
+ document.addEventListener('pointerdown',e=>{
+  const header=e.target.closest&&e.target.closest('.os-window .window-header');
+  if(!header||e.target.closest('button'))return;
+  const w=header.closest('.os-window');if(!w)return;
+  if(w.classList.contains('marine-snapped')||w.classList.contains('maximized')){
+   const old=snapped.get(w);restoreWindow(w);
+   if(old&&!old.wasMax){
+    const width=Math.min(Math.max(360,parseFloat(w.style.width)||w.offsetWidth),innerWidth-20);
+    w.style.width=width+'px';w.style.height=old.height||'';
+    w.style.left=Math.max(0,Math.min(innerWidth-width,e.clientX-width/2))+'px';
+    w.style.top=Math.max(topOffset(),e.clientY-18)+'px';
+   }
+  }
+  dragWindow=w;
+ },true);
+ document.addEventListener('pointermove',e=>{if(dragWindow)previewSnap(placeFromPoint(e))},true);
+ document.addEventListener('pointerup',e=>{
+  if(!dragWindow)return;const w=dragWindow,place=placeFromPoint(e);dragWindow=null;previewSnap('');
+  if(place)snapWindow(w,place);
+ },true);
+ const originalToggleMaximize=toggleMaximize;
+ toggleMaximize=function(id){const w=$(id);if(!w)return;if(w.classList.contains('marine-snapped')){restoreWindow(w);return}if(w.classList.contains('maximized')){restoreWindow(w);return}saveWindowGeometry(w);setSnapRect(w,'max')};
+ window.addEventListener('resize',()=>qsa('.os-window[data-marine-snap]').forEach(w=>setSnapRect(w,w.dataset.marineSnap)));
+
+ let switcher=null,switcherCards=[],switcherIndex=0;
+ function buildSwitcher(){
+  if(!switcher){switcher=document.createElement('div');switcher.id='marineWindowSwitcher';switcher.className='hidden';switcher.innerHTML='<div class="marine-switcher-panel"><div class="flex items-center justify-between mb-4"><div><h2 class="text-lg font-bold text-white">Open windows</h2><p class="text-xs text-slate-400 mt-1">Alt + Tab to move · Enter to open</p></div><button type="button" class="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-300" aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div><div class="marine-switcher-grid"></div></div>';switcher.querySelector('button').addEventListener('click',closeSwitcher);switcher.addEventListener('click',e=>{if(e.target===switcher)closeSwitcher()});document.body.append(switcher)}
+  const grid=switcher.querySelector('.marine-switcher-grid');grid.replaceChildren();
+  switcherCards=qsa('.os-window').filter(w=>!w.classList.contains('hidden')).sort((a,b)=>(Number(b.style.zIndex)||0)-(Number(a.style.zIndex)||0));
+  switcherCards.forEach((w,index)=>{
+   const b=document.createElement('button');b.type='button';b.className='marine-switcher-card'+(w.id===active?' active':'');b.dataset.index=index;
+   let app=appById(w.id),title=w.id==='genericAppWindow'?$('genericAppTitle').textContent:app?app.name:w.id.replace(/Window$/,'');
+   const icon=document.createElement('i');icon.className=app?app.icon:'fa-solid fa-window-maximize';
+   const label=document.createElement('span');label.textContent=title;b.append(icon,label);
+   b.addEventListener('click',()=>{switcherIndex=index;commitSwitcher()});grid.append(b)
+  });
+  switcher.classList.remove('hidden')
+ }
+ function showSwitcher(cycle){
+  buildSwitcher();if(!switcherCards.length){closeSwitcher();return}
+  if(cycle){switcherIndex=(switcherIndex+1)%switcherCards.length}
+  updateSwitcherSelection()
+ }
+ function updateSwitcherSelection(){
+  if(!switcher)return;
+  qsa('.marine-switcher-card',switcher).forEach((b,i)=>{b.classList.toggle('active',i===switcherIndex);if(i===switcherIndex)b.scrollIntoView({block:'nearest',inline:'nearest'})})
+ }
+ function closeSwitcher(){if(switcher)switcher.classList.add('hidden')}
+ function commitSwitcher(){const w=switcherCards[switcherIndex];closeSwitcher();if(w)openWindow(w.id,w.id==='genericAppWindow'?$('genericAppTitle').textContent:(appById(w.id)||{}).name)}
+ document.addEventListener('keydown',e=>{
+  if(e.key==='Tab'&&e.altKey){e.preventDefault();showSwitcher(!!switcher&&!switcher.classList.contains('hidden'));return}
+  if(switcher&&!switcher.classList.contains('hidden')){
+   if(e.key==='Escape'){e.preventDefault();closeSwitcher();return}
+   if(e.key==='Enter'){e.preventDefault();commitSwitcher();return}
+   if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();switcherIndex=(switcherIndex+1)%switcherCards.length;updateSwitcherSelection();return}
+   if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();switcherIndex=(switcherIndex+switcherCards.length-1)%switcherCards.length;updateSwitcherSelection();return}
+  }
+  const key=e.key;
+  if((e.metaKey&&key.startsWith('Arrow'))||(e.altKey&&e.shiftKey&&key.startsWith('Arrow'))){
+   const w=active&&$(active);if(!w)return;
+   const map={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'max',ArrowDown:'restore'};
+   if(map[key]){e.preventDefault();snapWindow(w,map[key])}
+  }
+ });
+ document.addEventListener('keyup',e=>{if(e.key==='Alt'&&switcher&&!switcher.classList.contains('hidden'))commitSwitcher()});
+ window.showMarineSwitcher=()=>showSwitcher(false);
+
+ /* Browser tab menu, duplicate/close actions and recently closed tab recovery. */
+ let recentlyClosed=[];
+ const baseCloseBrowserTab=closeTab;
+ closeTab=function(id){
+  const tab=tabs.find(t=>t.id===id);
+  if(tab&&tab.url){recentlyClosed=[{url:tab.url,title:tab.title}].concat(recentlyClosed).slice(0,8)}
+  return baseCloseBrowserTab(id)
+ };
+ function reopenLastTab(){const last=recentlyClosed.shift();if(last)newTab(last.url);return !!last}
+ const baseRenderBrowserTabs=renderTabs;
+ renderTabs=function(){
+  baseRenderBrowserTabs();
+  qsa('#uvTabs [role=tab]').forEach((el,index)=>{
+   const tab=tabs[index];if(!tab)return;
+   el.oncontextmenu=e=>{
+    e.preventDefault();e.stopPropagation();
+    const menu=document.createElement('div');menu.className='marine-popover';
+    const options=[
+     ['Duplicate tab','fa-copy',()=>newTab(tab.url||'')],
+     ['Reload tab','fa-rotate-right',()=>{if(tab.url)uvGo(tab.url,tab)}],
+     ['Close other tabs','fa-clone',()=>{tabs.slice().forEach(t=>{if(t.id!==tab.id)closeTab(t.id)});pickTab(tab.id)}],
+     ['Close tab','fa-xmark',()=>closeTab(tab.id)]
+    ];
+    options.forEach(o=>{const b=document.createElement('button');b.type='button';const i=document.createElement('i');i.className='fa-solid '+o[1];b.append(i,document.createTextNode(o[0]));b.addEventListener('click',()=>{menu.remove();o[2]()});menu.append(b)});
+    menu.style.left=Math.max(8,Math.min(e.clientX,innerWidth-220))+'px';menu.style.top=Math.max(8,Math.min(e.clientY,innerHeight-190))+'px';document.body.append(menu);
+    setTimeout(()=>document.addEventListener('pointerdown',function dismiss(ev){if(!menu.contains(ev.target)){menu.remove();document.removeEventListener('pointerdown',dismiss)}},{once:true}),0)
+   }
+  })
+ };
+ document.addEventListener('keydown',e=>{
+  const mod=e.ctrlKey||e.metaKey;
+  if(!mod)return;
+  const win=$('browserWindow');if(!win||win.classList.contains('hidden'))return;
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(['input','textarea','select'].includes(tag)&&e.key.toLowerCase()!=='l'&&e.key.toLowerCase()!=='t'&&!(e.shiftKey&&e.key.toLowerCase()==='t'))return;
+  const k=e.key.toLowerCase();
+  if(k==='t'&&!e.shiftKey){e.preventDefault();newTab();return}
+  if(k==='w'){e.preventDefault();closeTab(curId);return}
+  if(k==='l'){e.preventDefault();$('uvAddress').focus();$('uvAddress').select();return}
+  if(k==='r'){e.preventDefault();const t=cur();if(t&&t.url)uvGo(t.url,t);return}
+  if(k==='t'&&e.shiftKey){e.preventDefault();reopenLastTab()}
+ });
+ /* Give search results and app-library cards the same context actions. */
+ qsa('#storeSystemApps button,#storeCommunityApps button,.store-app-card').forEach(el=>{if(!el.dataset.marineKey){const it=findItemForElement(el);if(it)el.dataset.marineKey=keyFor(it)}});
+
+ /* Small-screen shell layout and shortcut discoverability. */
+ const dockSearch=document.querySelector('.dock-container>div:nth-child(2)');
+ if(dockSearch)dockSearch.title='Search apps and settings';
+ const resizeWindows=()=>{if(innerWidth>760)return;qsa('.os-window:not(.hidden)').forEach(w=>{if(w.dataset.marineSnap)return;w.style.position='fixed';w.style.left='0';w.style.top=topOffset()+'px';w.style.width='100vw';w.style.height=Math.max(220,innerHeight-topOffset()-78)+'px'})};
+ window.addEventListener('resize',resizeWindows);resizeWindows();
+ const baseResponsiveOpenWindow=openWindow;
+ openWindow=function(id,title){const result=baseResponsiveOpenWindow(id,title);requestAnimationFrame(resizeWindows);return result};
+ if(typeof applyMarinePrefs==='function')applyMarinePrefs();
+})();
+</script>
 </body>
 </html>
