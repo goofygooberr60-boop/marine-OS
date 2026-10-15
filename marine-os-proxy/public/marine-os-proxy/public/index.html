@@ -287,9 +287,9 @@ body.perf .dock-container,body.perf #osTopBar{background-color:#101015!important
                 <div class="relative aspect-video overflow-hidden bg-gradient-to-br from-rose-500 via-red-600 to-orange-500 flex items-center justify-center"><i class="fa-solid fa-cube text-6xl text-white/90 drop-shadow-lg"></i></div>
                 <div class="flex flex-1 flex-col p-4">
                     <h3 class="text-base font-bold text-white group-hover:text-blue-400 transition-colors">Roblox</h3>
-                    <p class="mt-1 text-[11px] leading-snug text-slate-400">Opens embedded in Marine OS. Cloud-streamed, so it may not work on every network. Never type your main Roblox password into a third-party site.</p>
+                    <p class="mt-1 text-[11px] leading-snug text-slate-400">Opens embedded in Marine OS through the built-in proxy. Cloud-streamed, so it may not work on every network. Never type your main Roblox password into a third-party site.</p>
                     <div class="mt-auto pt-4">
-                        <button class="launch-btn w-full rounded-lg bg-blue-600/20 border border-blue-500/30 py-2 px-4 text-xs font-bold text-blue-400 transition-all group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 shadow-md cursor-pointer text-center uppercase tracking-wider" data-title="Roblox" data-url="https://countrynewsela.opik.net/apps/a/19900/b.html">Open App</button>
+                        <button class="launch-btn w-full rounded-lg bg-blue-600/20 border border-blue-500/30 py-2 px-4 text-xs font-bold text-blue-400 transition-all group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 shadow-md cursor-pointer text-center uppercase tracking-wider" data-title="Roblox" data-url="https://countrynewsela.opik.net/apps/a/19900/b.html" data-proxy="1">Open App</button>
                     </div>
                 </div>
             </article>
@@ -1321,8 +1321,26 @@ $$('.os-window').forEach(w=>{w.addEventListener('pointerdown',()=>focusWin(w.id)
 /* ---- generic app window / games ---- */
 function openGeneric(name,icon,url,html){$('genericAppTitle').textContent=name;$('genericAppIcon').className=icon+' text-white text-lg';
  const f=$('genericAppIframe');f.removeAttribute('src');f.removeAttribute('srcdoc');if(html)f.srcdoc=html;else f.src=url;openWindow('genericAppWindow',name)}
-const gm=$('gameModal'),gf=$('gameModalIframe');
-function launchGame(title,url,proxy){if(proxy){hideStart();openWindow('browserWindow','Browser');newTab(url);return}$('gameModalTitle').textContent=title;$('iframeLoader').style.display='flex';gf.onload=()=>$('iframeLoader').style.display='none';gf.src=url;gm.showModal();hideStart()}
+const gm=$('gameModal'),gf=$('gameModalIframe');let gameLoadId=0;
+async function launchGame(title,url,proxy){
+ const id=++gameLoadId,loader=$('iframeLoader'),icon=loader.querySelector('i'),message=loader.querySelector('p');
+ $('gameModalTitle').textContent=title;loader.style.display='flex';
+ icon.className='fa-solid fa-circle-notch fa-spin text-5xl mb-4 text-slate-700';
+ message.textContent=proxy?'Connecting to Marine OS proxy...':'Loading...';
+ gf.onload=()=>{if(id===gameLoadId)loader.style.display='none'};
+ gm.showModal();hideStart();
+ if(!proxy){gf.src=url;return}
+ try{
+  await proxyStart();if(id!==gameLoadId)return;
+  const engine=PX.name,autoFallback=engine==='sj'&&!forceEng&&store.get('proxyEngine','auto')==='auto';
+  gf.src=PX.enc(url);
+  if(autoFallback)setTimeout(()=>{if(id===gameLoadId&&loader.style.display!=='none'){forceEng='uv';pxP=null;PX.enc=null;launchGame(title,url,true)}},20000);
+ }catch(e){
+  if(id!==gameLoadId)return;
+  icon.className='fa-solid fa-triangle-exclamation text-5xl mb-4 text-amber-500';
+  message.textContent='Marine OS proxy failed to start. Check Settings > Browser.';
+ }
+}
 $$('.launch-btn').forEach(b=>b.addEventListener('click',()=>launchGame(b.dataset.title,b.dataset.url,b.dataset.proxy)));
 $('closeModalBtn').onclick=()=>{gm.close();gf.src='about:blank'};
 $('refreshIframeBtn').onclick=()=>{const s=gf.src;gf.src='about:blank';setTimeout(()=>gf.src=s,50)};
