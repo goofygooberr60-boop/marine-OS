@@ -610,10 +610,16 @@ body.perf .dock-container,body.perf #osTopBar{background-color:#101015!important
         <!-- Sidebar -->
         <div class="w-60 border-r border-white/5 flex flex-col p-4 bg-[#141416]">
             <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-4 px-3">Settings</div>
-            <nav class="flex flex-col gap-1 flex-1">
+            <nav class="flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar max-h-[72vh]">
                 <button class="settings-tab-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors active bg-white/10" data-target="tab-appearance">
                     <i class="fa-solid fa-palette text-[#ff9800] w-5 text-center"></i> Appearance
                 </button>
+                <button class="settings-tab-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors" data-target="tab-personalization"><i class="fa-solid fa-wand-magic-sparkles text-pink-400 w-5 text-center"></i> Personalization</button>
+                <button class="settings-tab-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors" data-target="tab-systemprefs"><i class="fa-solid fa-display text-sky-400 w-5 text-center"></i> System</button>
+                <button class="settings-tab-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors" data-target="tab-apps"><i class="fa-solid fa-window-restore text-violet-400 w-5 text-center"></i> Apps</button>
+                <button class="settings-tab-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors" data-target="tab-time"><i class="fa-solid fa-clock text-amber-400 w-5 text-center"></i> Time &amp; Language</button>
+                <button class="settings-tab-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors" data-target="tab-gaming"><i class="fa-solid fa-gamepad text-green-400 w-5 text-center"></i> Gaming</button>
+                <button class="settings-tab-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors" data-target="tab-privacy"><i class="fa-solid fa-shield-halved text-cyan-400 w-5 text-center"></i> Privacy</button>
                 <button class="settings-tab-btn flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors" data-target="tab-accessibility">
                     <i class="fa-solid fa-universal-access text-[#00e676] w-5 text-center"></i> Accessibility
                 </button>
@@ -861,6 +867,13 @@ body.perf .dock-container,body.perf #osTopBar{background-color:#101015!important
             </div>
 
             <!-- Panic Key Tab -->
+
+            <div id="tab-personalization" class="settings-tab hidden"><h2 class="text-3xl font-bold text-white mb-2">Personalization</h2><p class="text-slate-400 text-sm mb-8">Adjust the look and feel of Marine OS.</p><div id="prefs-personalization"></div></div>
+            <div id="tab-systemprefs" class="settings-tab hidden"><h2 class="text-3xl font-bold text-white mb-2">System</h2><p class="text-slate-400 text-sm mb-8">Control display behavior, accessibility, and app windows.</p><div id="prefs-system"></div></div>
+            <div id="tab-apps" class="settings-tab hidden"><h2 class="text-3xl font-bold text-white mb-2">Apps</h2><p class="text-slate-400 text-sm mb-8">Set how the browser and embedded apps behave.</p><div id="prefs-apps"></div></div>
+            <div id="tab-time" class="settings-tab hidden"><h2 class="text-3xl font-bold text-white mb-2">Time &amp; Language</h2><p class="text-slate-400 text-sm mb-8">Choose clock, date, and new-tab display formats.</p><div id="prefs-time"></div></div>
+            <div id="tab-gaming" class="settings-tab hidden"><h2 class="text-3xl font-bold text-white mb-2">Gaming</h2><p class="text-slate-400 text-sm mb-8">Set how embedded games open and play.</p><div id="prefs-gaming"></div></div>
+            <div id="tab-privacy" class="settings-tab hidden"><h2 class="text-3xl font-bold text-white mb-2">Privacy</h2><p class="text-slate-400 text-sm mb-8">Manage browsing privacy, permissions, and saved data.</p><div id="prefs-privacy"></div></div>
             <div id="tab-panickey" class="settings-tab hidden">
                 <h2 class="text-3xl font-bold text-white mb-2">Panic Key</h2>
                 <p class="text-slate-400 text-sm mb-8">Instantly hide Marine OS and jump to a safe page when a key is pressed.</p>
@@ -1336,7 +1349,7 @@ async function launchGame(title,url,proxy){
  if(!proxy){gf.src=url;return}
  try{
   await proxyStart();if(id!==gameLoadId)return;
-  const engine=PX.name,autoFallback=engine==='sj'&&!forceEng&&store.get('proxyEngine','auto')==='auto';
+  const engine=PX.name,autoFallback=engine==='sj'&&!forceEng&&store.get('proxyEngine','auto')==='auto'&&store.get('prefSettings',{}).autoProxyFallback!==false;
   gf.src=PX.enc(url);
   if(autoFallback)setTimeout(()=>{if(id===gameLoadId&&loader.style.display!=='none'){forceEng='uv';pxP=null;PX.enc=null;launchGame(title,url,true)}},20000);
  }catch(e){
@@ -1355,8 +1368,9 @@ const di=$('desktop-icons');
 APPS.filter(a=>a.desk).forEach(a=>{const d=document.createElement('div');d.className='desk-icon';
  d.innerHTML=`<div class="ico bg-gradient-to-b ${a.bg}"><i class="${a.icon}"></i></div><span>${a.name}</span>`;
  const run=()=>openWindow(a.id,a.name);
- d.onclick=e=>{e.stopPropagation();$$('.desk-icon').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');if(matchMedia('(pointer:coarse)').matches)run()};
- d.ondblclick=run;di.append(d)});
+ let deskClickTimer=0;
+ d.onclick=e=>{e.stopPropagation();$$('.desk-icon').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');if(matchMedia('(pointer:coarse)').matches)run();else if(store.get('prefSettings',{}).singleClickOpen){clearTimeout(deskClickTimer);deskClickTimer=setTimeout(run,180)}};
+ d.ondblclick=e=>{clearTimeout(deskClickTimer);if(!store.get('prefSettings',{}).singleClickOpen)run()};di.append(d)});
 $('desktop').addEventListener('click',()=>$$('.desk-icon').forEach(x=>x.classList.remove('sel')));
 
 /* ---- start menu + search ---- */
@@ -1564,7 +1578,50 @@ $('cloakIconFile').onchange=e=>{const f=e.target.files[0];if(!f)return;if(f.size
 applyCloak(cloak||{});
 function openCloaked(){if(self!==top){alert('This tab is already cloaked.');return}
  const t=(cloak&&cloak.t)||document.title,i=(cloak&&cloak.i)||DEF.i,mode=$('cloakMode').value;
- const doc=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(t)}</title><link rel="icon" href="${esc(i)}"><style>html,body{margin:0;height:100%;overflow:hidden;background:#000}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="${esc(location.href.split('#')[0])}" allow="fullscreen;autoplay;clipboard-write"></iframe></body></html>`;
+ const doc=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(t)}</title><link rel="icon" href="${esc(i)}"><style>html,body{margin:0;height:100%;overflow:hidden;background:#000}iframe{border:0;width:100%;height:100%}
+/* Personalization, system and app preferences */
+:root{--pref-accent:#f97316;--pref-accent-alpha:.85;--pref-window-alpha:.94;--pref-window-radius:12px;--pref-window-blur:18px}
+.settings-pref-group{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:8px 18px;margin:0 0 16px}
+.settings-pref-group h3{font-size:15px;font-weight:700;color:#e2e8f0;padding:10px 0}
+.settings-pref-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid rgba(255,255,255,.06)}
+.settings-pref-row:first-of-type{border-top:0}
+.settings-pref-copy{min-width:0;flex:1}
+.settings-pref-control{flex:0 0 auto;max-width:260px;background:#111113;color:#f8fafc;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:8px 10px}
+.settings-pref-row input[type=range]{accent-color:var(--pref-accent);width:150px}
+.settings-pref-row input[type=color]{width:48px;height:36px;padding:3px;cursor:pointer}
+.settings-pref-row input[type=checkbox]{width:19px;height:19px;accent-color:var(--pref-accent);cursor:pointer}
+.settings-pref-description{color:#94a3b8;font-size:12px;margin-top:3px;line-height:1.45}
+.settings-pref-value{color:#cbd5e1;font-size:12px;min-width:45px;text-align:right;font-variant-numeric:tabular-nums}
+.settings-pref-action{background:rgba(255,255,255,.1);color:#e2e8f0;border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer}
+.settings-pref-action:hover{background:rgba(255,255,255,.18)}
+body.prefs-light{color:#20232a}
+body.prefs-light #osTopBar{background:rgba(245,247,250,.92)!important;color:#1f2937!important;border-bottom:1px solid rgba(15,23,42,.12)}
+body.prefs-light .dock-container{background:rgba(245,247,250,.92)!important;border-color:rgba(15,23,42,.14)!important}
+body.prefs-light .os-window{background-color:rgba(246,248,252,var(--pref-window-alpha))!important;color:#1f2937}
+body.prefs-light .window-header{background-color:#e6e9ef!important;color:#1f2937!important;border-color:rgba(15,23,42,.12)!important}
+body.prefs-light #settingsWindow .settings-tab h2,body.prefs-light #settingsWindow .settings-pref-group h3{color:#111827!important}
+body.prefs-light #settingsWindow .settings-pref-copy,body.prefs-light #settingsWindow .settings-pref-copy .text-slate-200,body.prefs-light #settingsWindow .settings-pref-copy .text-white{color:#334155!important}
+body.prefs-light #settingsWindow .settings-pref-control{background:#fff;color:#111827;border-color:#cbd5e1}
+body.prefs-light .dock-item>span{background:#fff!important;color:#1f2937!important}
+body.prefs-hide-icons #desktop-icons{display:none!important}
+body.prefs-hide-icon-labels .desk-icon>span{display:none!important}
+body.prefs-hide-dock-labels .dock-item>span{display:none!important}
+body.prefs-no-address #uvAddress{filter:blur(5px)}
+body.prefs-compact-tabs #uvTabs>div{height:30px!important;min-width:86px!important;max-width:145px!important;font-size:10px!important}
+body.prefs-density-compact .settings-pref-row{padding:7px 0}
+body.prefs-density-spacious .settings-pref-row{padding:17px 0}
+body.prefs-no-animations *,body.prefs-no-animations *::before,body.prefs-no-animations *::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}
+body.prefs-window-style .os-window{background-color:rgba(21,21,27,var(--pref-window-alpha))!important;border-radius:var(--pref-window-radius)!important;backdrop-filter:blur(var(--pref-window-blur))!important;-webkit-backdrop-filter:blur(var(--pref-window-blur))!important}
+body.prefs-no-shadow .os-window{box-shadow:none!important}
+html.prefs-accent-color .settings-tab-btn.active,html.prefs-accent-color .dock-item.is-open .dock-indicator{background-color:color-mix(in srgb,var(--pref-accent) calc(var(--pref-accent-alpha)*100%),transparent)!important}
+html.prefs-accent-color .text-orange-400,html.prefs-accent-color .text-orange-500,html.prefs-accent-color .accent-orange-500{color:var(--pref-accent)!important;accent-color:var(--pref-accent)!important}
+html.prefs-accent-color button.bg-orange-600{background-color:var(--pref-accent)!important}
+html.prefs-accent-color .settings-tab-btn.active{border-left:3px solid var(--pref-accent)}
+body.prefs-no-topbar #osTopBar{display:none!important}
+body.prefs-no-topbar #desktop{padding-top:0!important}
+body.prefs-hide-clock #osClock{display:none!important}
+body.prefs-glass .os-window{backdrop-filter:blur(var(--pref-window-blur))!important;-webkit-backdrop-filter:blur(var(--pref-window-blur))!important}
+</style></head><body><iframe src="${esc(location.href.split('#')[0])}" allow="fullscreen;autoplay;clipboard-write"></iframe></body></html>`;
  let w;
  if(mode==='blob')w=window.open(URL.createObjectURL(new Blob([doc],{type:'text/html'})),'_blank');
  else{w=window.open('about:blank','_blank');if(w){w.document.open();w.document.write(doc);w.document.close()}}
@@ -1624,15 +1681,15 @@ function syncBar(){const t=cur();if(!t)return;const a=$('uvAddress');if(document
 function startLoad(){const l=$('uvLoadFill');l.style.transition='none';l.style.width='0%';l.style.opacity='1';requestAnimationFrame(()=>{l.style.transition='width 8s cubic-bezier(.1,.6,.2,1)';l.style.width='85%'})}
 function endLoad(){const l=$('uvLoadFill');l.style.transition='width .2s';l.style.width='100%';setTimeout(()=>{l.style.opacity='0'},260)}
 async function uvGo(q,t){t=t||cur();const u=uvURL(q);if(!u||!t)return;setStatus('Connecting...','bg-amber-500/15 text-amber-300');uvNote('');
- try{await proxyStart();t.url=u;t.title=hostOf(u);t.f.src=PX.enc(u);t.loading=true;clearTimeout(t.loadT);if(PX.name==='sj'&&!forceEng&&store.get('proxyEngine','auto')==='auto')t.loadT=setTimeout(()=>{if(t.loading){forceEng='uv';pxP=null;PX.enc=null;uvGo(t.url,t)}},20000);t.f.classList.toggle('hidden',t.id!==curId);if(t.id===curId)startLoad();setStatus('Proxied · '+PX.label,'bg-emerald-500/15 text-emerald-300');renderTabs();syncBar()}
+ try{await proxyStart();t.url=u;t.title=hostOf(u);t.f.src=PX.enc(u);t.loading=true;clearTimeout(t.loadT);if(PX.name==='sj'&&!forceEng&&store.get('proxyEngine','auto')==='auto'&&store.get('prefSettings',{}).autoProxyFallback!==false)t.loadT=setTimeout(()=>{if(t.loading){forceEng='uv';pxP=null;PX.enc=null;uvGo(t.url,t)}},20000);t.f.classList.toggle('hidden',t.id!==curId);if(t.id===curId)startLoad();setStatus('Proxied · '+PX.label,'bg-emerald-500/15 text-emerald-300');renderTabs();syncBar()}
  catch(e){setStatus('Offline','bg-red-500/15 text-red-300');t.url='';uvNote(UVERR[e.message]||('Proxy error: '+e.message));pickTab(t.id)}}
 function pageProblem(t){try{const d=t.f.contentDocument,txt=((d.body&&d.body.innerText)||'').trim();
  if(!txt&&!(d.body&&d.body.querySelector('img,canvas,video,iframe,svg')))return'The page loaded but it is blank.';
  if(txt.length<700&&/(error|failed|not found|unable|timed out|econn|enotfound|refused|denied|forbidden|blocked|captcha|unusual traffic)/i.test(txt))return txt.replace(/\s+/g,' ').slice(0,240)}catch(e){}return''}
 function showBanner(t,msg){const b=$('uvBanner');if(!msg||t.id!==curId){b.classList.add('hidden');return}
  const other=PX.name==='sj'?'Ultraviolet':'Scramjet';$('uvBannerMsg').textContent='Problem loading this page ('+PX.label+'): '+msg;$('uvBannerSwap').textContent='Try '+other;b.classList.remove('hidden')}
-function tabLoaded(t){if(!t.url)return;t.loading=false;clearTimeout(t.loadT);setTimeout(()=>showBanner(t,pageProblem(t)),900);try{const w=t.f.contentWindow,d0=PX.dec&&PX.dec(w.location.pathname);if(d0)t.url=d0;const d=t.f.contentDocument&&t.f.contentDocument.title;if(d)t.title=d.slice(0,80)}catch(e){}
- if(bHist[0]&&bHist[0].u===t.url)bHist[0].t=t.title;else bHist.unshift({t:t.title,u:t.url,ts:Date.now()});saveB();if(t.id===curId){endLoad();syncBar()}renderTabs()}
+function tabLoaded(t){if(t.disposed||!t.url)return;t.loading=false;clearTimeout(t.loadT);setTimeout(()=>showBanner(t,pageProblem(t)),900);try{const w=t.f.contentWindow,d0=PX.dec&&PX.dec(w.location.pathname);if(d0)t.url=d0;const d=t.f.contentDocument&&t.f.contentDocument.title;if(d)t.title=d.slice(0,80)}catch(e){}
+ if(store.get('prefSettings',{}).saveHistory!==false&&!store.get('prefSettings',{}).privateBrowsing){if(bHist[0]&&bHist[0].u===t.url)bHist[0].t=t.title;else bHist.unshift({t:t.title,u:t.url,ts:Date.now()});saveB()}if(t.id===curId){endLoad();syncBar()}renderTabs()}
 function renderNewPage(){const n=new Date(),hr=n.getHours();$('uvClock').textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});$('uvGreet').textContent=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
  const d=$('uvDial');d.innerHTML='';bBook.slice(0,10).forEach(b=>{const x=document.createElement('button');x.className='flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-blue-500/50 cursor-pointer transition-all';x.innerHTML=badge(b.u,b.t,44)+`<span class="text-xs text-slate-300 truncate w-full">${esc(b.t)}</span>`;x.onclick=()=>uvGo(b.u);d.append(x)});
  const r=$('uvRecent');r.innerHTML='';bHist.slice(0,5).forEach(h=>{const x=document.createElement('button');x.className='flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/5 text-left cursor-pointer';x.innerHTML=badge(h.u,h.t,24)+`<span class="min-w-0"><span class="block text-sm text-slate-200 truncate">${esc(h.t||hostOf(h.u))}</span><span class="block text-[11px] text-slate-500 truncate">${esc(hostOf(h.u))}</span></span>`;x.onclick=()=>uvGo(h.u);r.append(x)});
@@ -1812,6 +1869,409 @@ $('bTest').onclick=async()=>{const o=$('bTestOut'),b=$('bTest');b.disabled=true;
 $('uvBannerClose').onclick=()=>$('uvBanner').classList.add('hidden');
 $('uvBannerSwap').onclick=()=>{const t=cur();$('uvBanner').classList.add('hidden');if(!t||!t.url)return;forceEng=PX.name==='sj'?'uv':'sj';pxP=null;PX.enc=null;uvGo(t.url,t)};
 
+
+
+/* ---- Windows-style settings and app lifecycle preferences ---- */
+const marinePrefLightStyle=document.createElement('style');
+marinePrefLightStyle.textContent=`body.prefs-light.prefs-window-style .os-window{background-color:rgba(246,248,252,var(--pref-window-alpha))!important;color:#1f2937!important}
+body.prefs-light #settingsWindow .settings-pref-group{background:rgba(15,23,42,.035);border-color:rgba(15,23,42,.1)}
+body.prefs-light #settingsWindow .settings-pref-row{border-color:rgba(15,23,42,.1)}
+body.prefs-light #settingsWindow .settings-pref-description{color:#64748b!important}
+body.prefs-light #settingsWindow .settings-pref-value{color:#475569!important}
+body.prefs-light #settingsWindow .settings-pref-action{background:#e2e8f0;color:#1f2937;border-color:#cbd5e1}
+body.prefs-light #startMenu,body.prefs-light #contextMenu{background-color:rgba(246,248,252,.98)!important;color:#1f2937!important}`;
+document.head.append(marinePrefLightStyle);
+const marinePrefDefs=[];
+const addMarinePref=(category,group,id,label,description,type,value,extra={})=>marinePrefDefs.push(Object.assign({category,group,id,label,description,type,value},extra));
+const selectPref=(category,group,id,label,description,value,options)=>addMarinePref(category,group,id,label,description,'select',value,{options});
+const togglePref=(category,group,id,label,description,value)=>addMarinePref(category,group,id,label,description,'toggle',value);
+const rangePref=(category,group,id,label,description,value,min,max,step,unit)=>addMarinePref(category,group,id,label,description,'range',value,{min,max,step,unit});
+const colorPref=(category,group,id,label,description,value)=>addMarinePref(category,group,id,label,description,'color',value);
+const textPref=(category,group,id,label,description,value)=>addMarinePref(category,group,id,label,description,'text',value);
+const actionPref=(category,group,id,label,description,button,action)=>addMarinePref(category,group,id,label,description,'action',null,{button,action});
+const opts=a=>a.map(x=>({value:x[0],label:x[1]}));
+
+selectPref('personalization','Theme','appearanceMode','Appearance mode','Use a dark, light, or system-matched shell.','dark',opts([['dark','Dark'],['light','Light'],['system','Match device']]));
+selectPref('personalization','Theme','themePreset','Theme color set','Use one of the existing Marine OS color palettes.','marine',opts([['marine','Marine'],['orange','Orange'],['onyx','Black'],['green','Green'],['blue','Blue'],['purple','Purple'],['pink','Pink'],['red','Red'],['teal','Teal']]));
+colorPref('personalization','Theme','accentColor','Accent color','Changes active settings, buttons, and highlights.','#f97316');
+rangePref('personalization','Theme','accentStrength','Accent strength','Adjust how strongly the accent color appears.','85',15,100,5,'%');
+textPref('personalization','Background','wallpaperUrl','Wallpaper image URL','Paste an image link. Leave empty for a plain background.','');
+selectPref('personalization','Background','wallpaperFit','Wallpaper sizing','Choose how the wallpaper fills the screen.','cover',opts([['cover','Fill screen'],['contain','Fit inside'],['auto','Original size']]));
+selectPref('personalization','Background','wallpaperPosition','Wallpaper position','Choose where the image is anchored.','center',opts([['center','Center'],['top','Top'],['bottom','Bottom'],['left','Left'],['right','Right']]));
+colorPref('personalization','Background','wallpaperTint','Wallpaper tint','Overlay a tint on top of the wallpaper.','#000000');
+rangePref('personalization','Background','wallpaperTintStrength','Wallpaper tint strength','Set the tint opacity.','0',0,75,5,'%');
+togglePref('personalization','Desktop','desktopIcons','Show desktop icons','Show or hide the desktop app shortcuts.',true);
+rangePref('personalization','Desktop','desktopIconSize','Desktop icon size','Resize the desktop app tiles.','70',44,100,2,'px');
+togglePref('personalization','Desktop','desktopIconLabels','Show desktop icon labels','Show app names under desktop icons.',true);
+selectPref('personalization','Desktop','desktopLayout','Desktop icon layout','Arrange shortcuts in a column, row, or grid.','column',opts([['column','Column'],['row','Row'],['grid','Grid']]));
+rangePref('personalization','Desktop','desktopSpacing','Desktop icon spacing','Set the gap between desktop shortcuts.','24',6,48,2,'px');
+togglePref('personalization','Desktop','singleClickOpen','Open desktop apps with one click','Single click opens an app; double click remains available when off.',false);
+selectPref('personalization','Dock','dockPosition','Dock position','Place the app dock at the bottom or a screen edge.','bottom',opts([['bottom','Bottom'],['left','Left'],['right','Right']]));
+rangePref('personalization','Dock','dockIconSize','Dock icon size','Resize icons in the app dock.','46',34,60,2,'px');
+rangePref('personalization','Dock','dockOpacity','Dock opacity','Set the dock transparency.','90',35,100,5,'%');
+togglePref('personalization','Dock','dockAutoHide','Automatically hide the dock','Reveal it when the pointer reaches its screen edge.',false);
+togglePref('personalization','Dock','dockLabels','Show dock labels','Show app-name tooltips on dock icons.',true);
+togglePref('personalization','Dock','dockSearch','Show dock search','Show or hide the dock search button.',true);
+togglePref('personalization','Top bar','topBarVisible','Show the top bar','Hide the system menu and status area.',true);
+rangePref('personalization','Top bar','topBarOpacity','Top bar opacity','Set the top bar background opacity.','65',10,100,5,'%');
+togglePref('personalization','Top bar','showClock','Show the clock','Show or hide the top-bar clock.',true);
+togglePref('personalization','Top bar','showClockDate','Show the date with the clock','Display the date beside the time.',true);
+togglePref('personalization','Top bar','clock24','Use a 24-hour clock','Apply a 24-hour time format to the top bar.',false);
+togglePref('personalization','Top bar','clockSeconds','Show clock seconds','Include seconds in the top-bar clock.',false);
+togglePref('personalization','Top bar','showBattery','Show the battery icon','Show or hide the battery indicator.',true);
+rangePref('personalization','Windows','windowOpacity','Window opacity','Set the opacity of Marine OS app windows.','94',55,100,1,'%');
+rangePref('personalization','Windows','windowRadius','Window corner radius','Round window corners from square to soft.','12',0,30,1,'px');
+togglePref('personalization','Windows','windowShadow','Window shadows','Show depth shadows around app windows.',true);
+selectPref('personalization','Windows','titlebarHeight','Title bar height','Choose compact, normal, or tall window title bars.','normal',opts([['compact','Compact'],['normal','Normal'],['tall','Tall']]));
+selectPref('personalization','Interface','fontFamily','Interface font','Choose a built-in system font stack.','system',opts([['system','System'],['Arial, sans-serif','Arial'],['Trebuchet MS, sans-serif','Trebuchet MS'],['Georgia, serif','Georgia'],['monospace','Monospace']]));
+rangePref('personalization','Interface','uiScale','Interface scale','Scale the interface while keeping accessibility text size.','100',80,125,5,'%');
+selectPref('personalization','Interface','density','Interface density','Choose tighter or roomier settings rows.','comfortable',opts([['compact','Compact'],['comfortable','Comfortable'],['spacious','Spacious']]));
+togglePref('personalization','Interface','animations','Interface animations','Turn window and interface transitions on or off.',true);
+rangePref('personalization','Interface','glassBlur','Window glass blur','Adjust the blur behind Marine OS windows.','18',0,32,2,'px');
+rangePref('personalization','Interface','menuOpacity','Menu opacity','Set the start and context menu background opacity.','94',40,100,2,'%');
+rangePref('personalization','Lock screen','lockBlur','Lock screen background blur','Adjust the blur applied to the lock-screen wallpaper.','0',0,20,1,'px');
+
+rangePref('system','Display','screenBrightness','Screen brightness','Dim the Marine OS screen overlay.','100',40,100,5,'%');
+rangePref('system','Display','nightLight','Night light','Warm the display colors to reduce blue light.','0',0,100,5,'%');
+togglePref('system','Performance','performanceMode','Performance mode','Reduce motion, blur, and heavy visual effects.',false);
+togglePref('system','Accessibility','reduceMotion','Reduce motion','Disable interface animations and transitions.',false);
+togglePref('system','Accessibility','reduceTransparency','Reduce transparency','Use solid surfaces instead of glass effects.',false);
+selectPref('system','Security','idleLock','Lock after inactivity','Show the Marine OS lock screen after inactivity.','off',opts([['off','Never'],['1','1 minute'],['3','3 minutes'],['5','5 minutes'],['10','10 minutes'],['15','15 minutes'],['30','30 minutes']]));
+togglePref('system','Windows','restoreWindows','Reopen app windows after refresh','Restore visible Marine OS windows when this page reloads.',false);
+togglePref('system','Windows','confirmClose','Ask before closing windows','Show a confirmation before closing an app window.',false);
+togglePref('system','Dock','minimizeOnDock','Clicking an active dock icon minimizes it','Turn off to keep the active window open.',true);
+togglePref('system','Interface','smoothScroll','Smooth scrolling','Use smooth scrolling in Marine OS panels.',true);
+togglePref('system','Interface','fontSmoothing','Font smoothing','Use antialiased interface text.',true);
+
+selectPref('apps','Browser','defaultZoom','Default browser zoom','Set the zoom used by new browser tabs.','100',opts([['75','75%'],['90','90%'],['100','100%'],['110','110%'],['125','125%'],['150','150%'],['175','175%']]));
+selectPref('apps','Browser','newTabPage','New tab page','Show the Marine browser home page or a blank page.','home',opts([['home','Home page'],['blank','Blank page']]));
+togglePref('apps','Browser','saveHistory','Save browser history','Store pages visited through the Marine browser.',true);
+togglePref('apps','Browser','clearHistoryOnClose','Clear history when Browser closes','Remove saved page history when the Browser window closes.',false);
+togglePref('apps','Browser','showRecent','Show recent pages on the home page','Display recently visited pages in a new tab.',true);
+togglePref('apps','Browser','showBookmarks','Show the bookmarks bar','Display saved bookmarks above the browser page.',true);
+togglePref('apps','Browser','compactTabs','Compact browser tabs','Use smaller tab labels to fit more tabs.',false);
+togglePref('apps','Media','allowAutoplay','Allow embedded media autoplay','Let embedded websites request autoplay permission.',true);
+togglePref('apps','Media','muteWebMedia','Mute embedded websites by default','Mute audio and video in browser and generic app frames.',false);
+togglePref('apps','Media','pauseOnMinimize','Pause media when an app is minimized','Pause media in embedded frames when their window is minimized.',false);
+selectPref('apps','Browser','searchEngine','Default search engine','Used for text searches in the browser address bar.','bing',opts([['bing','Bing'],['ddg','DuckDuckGo'],['ddglite','DuckDuckGo Lite'],['google','Google'],['brave','Brave Search']]));
+
+selectPref('time','Clock','clockLocale','Clock language','Choose the language and regional date format.','en-US',opts([['en-US','English (United States)'],['en-GB','English (United Kingdom)'],['es-ES','Spanish'],['fr-FR','French'],['de-DE','German']]));
+selectPref('time','Clock','timeZone','Time zone','Choose local time or a common time zone.','local',opts([['local','Device local time'],['America/Phoenix','Phoenix'],['UTC','UTC'],['America/New_York','New York'],['Europe/London','London']]));
+selectPref('time','Clock','dateStyle','Date style','Choose the date length shown on the top bar and lock screen.','medium',opts([['short','Short'],['medium','Medium'],['long','Long'],['full','Full']]));
+togglePref('time','New tab','showNewTabClock','Show the new-tab clock','Show or hide the large clock on the Browser home page.',true);
+togglePref('time','New tab','showNewTabGreeting','Show the new-tab greeting','Show or hide the greeting on the Browser home page.',true);
+togglePref('time','New tab','newTab24','Use a 24-hour new-tab clock','Format the large Browser home-page clock.',false);
+togglePref('time','Lock screen','lockscreen24','Use a 24-hour lock-screen clock','Format the time shown on the lock screen.',false);
+
+togglePref('gaming','Game player','autoFullscreen','Open games in fullscreen','Request fullscreen when a game is launched.',false);
+rangePref('gaming','Game player','gameVolume','Game volume','Set volume for accessible audio and video in games.','100',0,100,5,'%');
+togglePref('gaming','Game player','gameMuted','Mute games by default','Mute game audio and video when the player can access it.',false);
+togglePref('gaming','Game player','showGameLoader','Show the game loading screen','Display the loading indicator while a game starts.',true);
+togglePref('gaming','Game player','autoProxyFallback','Automatically retry with the backup engine','Switch from Scramjet to Ultraviolet after a loading timeout.',true);
+togglePref('gaming','Game player','escClosesGame','Escape closes the game player','Allow Escape to close the game dialog.',true);
+rangePref('gaming','Game player','gameZoom','Game player zoom','Scale the embedded game frame.','100',70,130,5,'%');
+
+togglePref('privacy','Browsing','privateBrowsing','Private browsing session','Do not add pages to saved history or show recent pages.',false);
+togglePref('privacy','Browsing','confirmExternalLinks','Confirm external links','Ask before opening a link to another website.',false);
+togglePref('privacy','Website permissions','allowClipboard','Allow embedded pages to use clipboard write','Pass clipboard-write permission to embedded pages.',true);
+togglePref('privacy','Website permissions','noReferrer','Hide the referring page from embedded sites','Use a no-referrer policy on embedded frames.',false);
+togglePref('privacy','Browsing','confirmProxyLaunch','Ask before opening proxied games','Confirm before opening a game through the configured proxy engine.',false);
+togglePref('privacy','Browsing','hideAddress','Blur the browser address while a page is open','Hide the current address until the field is focused.',false);
+actionPref('privacy','Saved data','clearHistory','Clear browser history','Remove all saved Browser history.','Clear history','history');
+actionPref('privacy','Saved data','clearBookmarks','Clear bookmarks','Remove all saved Browser bookmarks.','Clear bookmarks','bookmarks');
+actionPref('privacy','Saved data','clearBrowserData','Clear history and bookmarks','Remove all saved Browser history and bookmarks.','Clear browser data','all');
+
+const marinePrefDefaults=Object.fromEntries(marinePrefDefs.filter(d=>d.type!=='action').map(d=>[d.id,d.value]));
+const savedMarinePrefs=store.get('prefSettings',{});
+const marinePrefs=Object.assign(marinePrefDefaults,savedMarinePrefs);
+if(savedMarinePrefs.themePreset===undefined)marinePrefs.themePreset=store.get('theme','marine');
+if(savedMarinePrefs.wallpaperUrl===undefined)marinePrefs.wallpaperUrl=store.get('wall','')||'';
+if(savedMarinePrefs.searchEngine===undefined)marinePrefs.searchEngine=typeof bEng!=='undefined'?bEng:'bing';
+if(savedMarinePrefs.showBookmarks===undefined)marinePrefs.showBookmarks=typeof bBar!=='undefined'?bBar:true;
+if(savedMarinePrefs.clock24===undefined)marinePrefs.clock24=store.get('clock24',false);
+if(savedMarinePrefs.clockSeconds===undefined)marinePrefs.clockSeconds=store.get('seconds',false);
+if(savedMarinePrefs.screenBrightness===undefined&&typeof A!=='undefined')marinePrefs.screenBrightness=A.bright;
+if(savedMarinePrefs.nightLight===undefined&&typeof A!=='undefined')marinePrefs.nightLight=A.night;
+if(savedMarinePrefs.reduceMotion===undefined)marinePrefs.reduceMotion=store.get('reduce-motion',false);
+if(savedMarinePrefs.reduceTransparency===undefined)marinePrefs.reduceTransparency=store.get('reduce-transparency',false);
+store.set('prefSettings',marinePrefs);
+
+const marinePrefGroups={personalization:'Personalization',system:'System',apps:'Apps',time:'Time & Language',gaming:'Gaming',privacy:'Privacy'};
+function marinePrefValueLabel(def,value){return String(value)+(def.unit||'')}
+function renderMarinePrefPages(){
+ for(const category of Object.keys(marinePrefGroups)){
+  const root=$('prefs-'+category);if(!root)continue;root.replaceChildren();
+  const groupNodes={};
+  marinePrefDefs.filter(d=>d.category===category).forEach(def=>{
+   let group=groupNodes[def.group];
+   if(!group){group=document.createElement('section');group.className='settings-pref-group';const heading=document.createElement('h3');heading.textContent=def.group;group.append(heading);groupNodes[def.group]=group;root.append(group)}
+   const row=document.createElement('div');row.className='settings-pref-row';
+   const copy=document.createElement('div');copy.className='settings-pref-copy';
+   const label=document.createElement('label');label.className='block font-bold text-sm text-slate-200';label.textContent=def.label;
+   const description=document.createElement('div');description.className='settings-pref-description';description.textContent=def.description;
+   copy.append(label,description);row.append(copy);
+   if(def.type==='action'){
+    const button=document.createElement('button');button.className='settings-pref-action';button.textContent=def.button;button.onclick=()=>runMarinePrefAction(def.action);row.append(button);
+   }else{
+    let input,display=null;
+    if(def.type==='select'){
+     input=document.createElement('select');input.className='settings-pref-control';
+     def.options.forEach(option=>{const o=document.createElement('option');o.value=option.value;o.textContent=option.label;input.append(o)});
+    }else{
+     input=document.createElement('input');input.type=def.type==='toggle'?'checkbox':def.type==='range'?'range':def.type;
+     if(def.type==='range'){input.min=def.min;input.max=def.max;input.step=def.step;display=document.createElement('span');display.className='settings-pref-value'}
+     if(def.type==='text'){input.placeholder='https://example.com/wallpaper.jpg';input.className='settings-pref-control';input.style.width='min(280px,35vw)'}
+    }
+    input.id='marine-pref-'+def.id;input.setAttribute('aria-label',def.label);label.htmlFor=input.id;
+    if(def.type==='toggle')input.checked=!!marinePrefs[def.id];else input.value=marinePrefs[def.id];
+    if(def.type==='range'){
+     const holder=document.createElement('div');holder.className='flex items-center gap-3';holder.append(input);
+     display.textContent=marinePrefValueLabel(def,input.value);holder.append(display);row.append(holder);
+     input.addEventListener('input',()=>{display.textContent=marinePrefValueLabel(def,input.value);setMarinePref(def.id,Number(input.value))});
+    }else{
+     row.append(input);
+     const eventName=def.type==='text'?'change':def.type==='color'?'input':'change';
+     input.addEventListener(eventName,()=>setMarinePref(def.id,def.type==='toggle'?input.checked:input.value));
+    }
+   }
+   group.append(row);
+  });
+ }
+}
+function hexToRgb(hex){const s=String(hex||'#000000').replace('#','');const n=parseInt(s.length===3?s.split('').map(c=>c+c).join(''):s,16);return[(n>>16)&255,(n>>8)&255,n&255]}
+function getMarineZone(){return marinePrefs.timeZone==='local'?undefined:marinePrefs.timeZone}
+function updateMarineClock(){
+ const locale=marinePrefs.clockLocale||'en-US',zone=getMarineZone(),date=new Date(),opts={hour:'numeric',minute:'2-digit',hour12:!marinePrefs.clock24};
+ if(marinePrefs.clockSeconds)opts.second='2-digit';if(zone)opts.timeZone=zone;
+ let time='';try{time=new Intl.DateTimeFormat(locale,opts).format(date)}catch(e){time=date.toLocaleTimeString()}
+ let dateText='';if(marinePrefs.showClockDate){try{const dopt={dateStyle:marinePrefs.dateStyle||'medium'};if(zone)dopt.timeZone=zone;dateText=new Intl.DateTimeFormat(locale,dopt).format(date)}catch(e){dateText=date.toLocaleDateString()}}
+ const clock=$('osClock');if(clock)clock.textContent=marinePrefs.showClock?[dateText,time].filter(Boolean).join(' '):'';
+ const lockOpts={hour:'numeric',minute:'2-digit',hour12:!marinePrefs.lockscreen24};if(zone)lockOpts.timeZone=zone;
+ try{$('lockTime').textContent=new Intl.DateTimeFormat(locale,lockOpts).format(date)}catch(e){}
+ try{$('lockDate').textContent=new Intl.DateTimeFormat(locale,{weekday:'long',month:'long',day:'numeric',timeZone:zone}).format(date)}catch(e){}
+ const newOpts={hour:'numeric',minute:'2-digit',hour12:!marinePrefs.newTab24};if(zone)newOpts.timeZone=zone;
+ try{$('uvClock').textContent=new Intl.DateTimeFormat(locale,newOpts).format(date)}catch(e){}
+}
+function updateMarineWallpaper(){
+ const url=String(marinePrefs.wallpaperUrl||'').trim(),rgb=hexToRgb(marinePrefs.wallpaperTint||'#000000'),alpha=Math.max(0,Math.min(75,Number(marinePrefs.wallpaperTintStrength)||0))/100;
+ const safeUrl=url.replace(/["\\\n\r]/g,c=>'\\'+c),image=url?'url("'+safeUrl+'")':'';
+ const tint=alpha?'linear-gradient(rgba('+rgb.join(',')+','+alpha+'),rgba('+rgb.join(',')+','+alpha+'))':'';
+ const layers=[tint,image].filter(Boolean).join(',');
+ document.body.style.backgroundImage=layers||'none';
+ document.body.style.backgroundSize=marinePrefs.wallpaperFit==='auto'?'auto':marinePrefs.wallpaperFit;
+ document.body.style.backgroundPosition=marinePrefs.wallpaperPosition;
+ document.body.style.backgroundRepeat='no-repeat';
+ const lockBg=$('lockScreenBg');if(lockBg){lockBg.style.backgroundImage=layers||'none';lockBg.style.backgroundSize=marinePrefs.wallpaperFit==='auto'?'auto':marinePrefs.wallpaperFit;lockBg.style.backgroundPosition=marinePrefs.wallpaperPosition}
+ store.set('wall',url);
+}
+function applyMarineAccent(){
+ const root=document.documentElement,hex=marinePrefs.accentColor||'#f97316';
+ root.style.setProperty('--pref-accent',hex);root.style.setProperty('--pref-accent-alpha',String(Number(marinePrefs.accentStrength||85)/100));
+ root.classList.add('prefs-accent-color');
+}
+function setMarineDockVisibility(nearEdge){
+ const dock=document.querySelector('.dock-container');if(!dock)return;
+ const visible=!marinePrefs.dockAutoHide||nearEdge;
+ dock.style.opacity=visible?String(Number(marinePrefs.dockOpacity||90)/100):'0';
+ dock.style.pointerEvents=visible?'':'none';
+}
+function configureMarineDock(){
+ const dock=document.querySelector('.dock-container');if(!dock)return;
+ const pos=marinePrefs.dockPosition||'bottom',size=Number(marinePrefs.dockIconSize||46);
+ dock.style.position='fixed';dock.style.zIndex='50';dock.style.transition='opacity .18s ease,transform .18s ease';
+ dock.style.top='';dock.style.right='';dock.style.bottom='';dock.style.left='';dock.style.transform='';
+ if(pos==='left'||pos==='right'){
+  dock.style.top='50%';dock.style.bottom='';dock.style.left=pos==='left'?'16px':'';dock.style.right=pos==='right'?'16px':'';dock.style.transform='translateY(-50%)';
+  dock.style.width='72px';dock.style.height='max-content';dock.style.flexDirection='column';dock.style.gap='6px';dock.style.padding='8px';
+ }else{
+  dock.style.left='50%';dock.style.right='';dock.style.bottom='16px';dock.style.top='';dock.style.transform='translateX(-50%)';
+  dock.style.width='max-content';dock.style.height='72px';dock.style.flexDirection='row';dock.style.gap='8px';dock.style.padding='8px';
+ }
+ dock.style.backgroundColor='rgba(42,43,56,'+(Number(marinePrefs.dockOpacity||90)/100)+')';
+ const children=dock.children;if(children[1])children[1].hidden=!marinePrefs.dockSearch||pos!=='bottom';if(children[2])children[2].hidden=!marinePrefs.dockSearch||pos!=='bottom';
+ dock.querySelectorAll('.dock-item button').forEach(button=>{button.style.width=size+'px';button.style.height=size+'px';button.style.fontSize=Math.round(size*.5)+'px'});
+ setMarineDockVisibility(false);
+}
+function applyMarineFramePrefs(frame,isGame){
+ if(!frame)return;
+ const allow=['fullscreen'];
+ if(marinePrefs.allowAutoplay)allow.push('autoplay');
+ if(marinePrefs.allowClipboard)allow.push('clipboard-write');
+ frame.setAttribute('allow',allow.join('; '));
+ frame.referrerPolicy=marinePrefs.noReferrer?'no-referrer':'strict-origin-when-cross-origin';
+ const muted=isGame?marinePrefs.gameMuted:marinePrefs.muteWebMedia;
+ const volume=isGame?Number(marinePrefs.gameVolume||0)/100:1;
+ try{frame.contentDocument.querySelectorAll('audio,video').forEach(media=>{
+  if(muted){media.muted=true;media.dataset.marineOsMuted='1'}else if(media.dataset.marineOsMuted){media.muted=false;delete media.dataset.marineOsMuted}
+  if(isGame)media.volume=volume;
+ })}catch(e){}
+}
+function stopMarineFrame(frame){
+ if(!frame)return;
+ try{frame.contentWindow.stop();frame.contentDocument.querySelectorAll('audio,video').forEach(m=>{m.pause();m.removeAttribute('src');m.load()})}catch(e){}
+ try{frame.removeAttribute('srcdoc');frame.src='about:blank'}catch(e){}
+}
+function disposeMarineBrowser(){
+ try{tabs.forEach(tab=>{tab.disposed=true;clearTimeout(tab.loadT);stopMarineFrame(tab.f);tab.f.remove()})}catch(e){}
+ tabs.length=0;curId=0;
+ const tabBar=$('uvTabs'),frames=$('uvFrames');if(tabBar)tabBar.replaceChildren();if(frames)frames.replaceChildren();
+ newTab();
+ if(marinePrefs.clearHistoryOnClose){bHist.length=0;saveB();renderNewPage()}
+}
+function resetMarineIdleTimer(){
+ clearTimeout(window.__marineIdleLockTimer);
+ const minutes=Number(marinePrefs.idleLock||0);
+ if(minutes>0)window.__marineIdleLockTimer=setTimeout(()=>{if(typeof showLock==='function')showLock()},minutes*60000);
+}
+function applyMarinePrefs(){
+ const body=document.body,root=document.documentElement;
+ const light=marinePrefs.appearanceMode==='light'||(marinePrefs.appearanceMode==='system'&&matchMedia('(prefers-color-scheme: light)').matches);
+ body.classList.toggle('prefs-light',light);body.classList.toggle('prefs-hide-icons',!marinePrefs.desktopIcons);
+ body.classList.toggle('prefs-hide-icon-labels',!marinePrefs.desktopIconLabels);body.classList.toggle('prefs-hide-dock-labels',!marinePrefs.dockLabels);
+ body.classList.toggle('prefs-no-address',!!marinePrefs.hideAddress);body.classList.toggle('prefs-compact-tabs',!!marinePrefs.compactTabs);
+ body.classList.toggle('prefs-density-compact',marinePrefs.density==='compact');body.classList.toggle('prefs-density-spacious',marinePrefs.density==='spacious');
+ body.classList.toggle('prefs-no-animations',!marinePrefs.animations||!!marinePrefs.reduceMotion);
+ body.classList.toggle('prefs-window-style',true);body.classList.toggle('prefs-no-shadow',!marinePrefs.windowShadow);
+ body.classList.toggle('prefs-no-topbar',!marinePrefs.topBarVisible);body.classList.toggle('prefs-hide-clock',!marinePrefs.showClock);
+ body.classList.toggle('prefs-glass',Number(marinePrefs.glassBlur)>0);
+ body.classList.toggle('perf',!!marinePrefs.performanceMode);body.classList.toggle('reduce-motion',!!marinePrefs.reduceMotion);
+ body.classList.toggle('reduce-transparency',!!marinePrefs.reduceTransparency);
+ root.style.setProperty('--pref-window-alpha',String(Number(marinePrefs.windowOpacity||94)/100));
+ root.style.setProperty('--pref-window-radius',Number(marinePrefs.windowRadius||0)+'px');
+ root.style.setProperty('--pref-window-blur',Number(marinePrefs.glassBlur||0)+'px');
+ root.style.fontFamily=marinePrefs.fontFamily==='system'?'system-ui, sans-serif':marinePrefs.fontFamily;
+ root.style.lineHeight=marinePrefs.density==='compact'?'1.25':marinePrefs.density==='spacious'?'1.65':'1.45';
+ document.documentElement.style.fontSize=(Number(A.text||100)*Number(marinePrefs.uiScale||100)/100)+'%';
+ document.body.style.webkitFontSmoothing=marinePrefs.fontSmoothing?'antialiased':'auto';
+ document.documentElement.style.scrollBehavior=marinePrefs.smoothScroll?'smooth':'auto';
+ const titlebar=marinePrefs.titlebarHeight==='compact'?34:marinePrefs.titlebarHeight==='tall'?56:44;
+ root.style.setProperty('--pref-titlebar-height',titlebar+'px');
+ document.querySelectorAll('.window-header').forEach(el=>{el.style.height=titlebar+'px';el.style.minHeight=titlebar+'px'});
+ const desktop=$('desktop-icons');
+ if(desktop){
+  const size=Number(marinePrefs.desktopIconSize||70);desktop.style.gap=Number(marinePrefs.desktopSpacing||24)+'px';
+  desktop.style.flexDirection=marinePrefs.desktopLayout==='row'?'row':'column';desktop.style.flexWrap='wrap';
+  if(marinePrefs.desktopLayout==='grid'){desktop.style.display='grid';desktop.style.gridTemplateColumns='repeat(auto-fill,minmax(84px,1fr))';desktop.style.alignContent='start'}
+  else{desktop.style.display='flex';desktop.style.gridTemplateColumns='';desktop.style.alignContent=''}
+  desktop.querySelectorAll('.desk-icon').forEach(icon=>{icon.style.width=(size+14)+'px';const tile=icon.querySelector('.ico');if(tile){tile.style.width=size+'px';tile.style.height=size+'px';tile.style.fontSize=Math.round(size*.43)+'px'}});
+ }
+ const dock=document.querySelector('.dock-container');if(dock){configureMarineDock();setMarineDockVisibility(false)}
+ const top=$('osTopBar');if(top)top.style.opacity=String(Number(marinePrefs.topBarOpacity||65)/100);
+ const battery=$('batteryIcon');if(battery)battery.hidden=!marinePrefs.showBattery;
+ const clock=$('osClock');if(clock)clock.hidden=!marinePrefs.showClock;
+ const start=$('startMenu'),context=$('contextMenu'),menuAlpha=Number(marinePrefs.menuOpacity||94)/100;
+ [start,context].forEach(el=>{if(el)el.style.backgroundColor='rgba(23,23,29,'+menuAlpha+')'});
+ const lockBg=$('lockScreenBg');if(lockBg)lockBg.style.setProperty('filter','blur('+Number(marinePrefs.lockBlur||0)+'px)','important');
+ const oldBookBar=$('uvBookBar');if(oldBookBar)oldBookBar.classList.toggle('hidden',!marinePrefs.showBookmarks||!bBar||!bBook.length);
+ const recent=$('uvRecent');if(recent&&recent.parentElement)recent.parentElement.classList.toggle('hidden',!marinePrefs.showRecent||marinePrefs.privateBrowsing);
+ const newClock=$('uvClock'),greet=$('uvGreet');if(newClock)newClock.classList.toggle('hidden',!marinePrefs.showNewTabClock);if(greet)greet.classList.toggle('hidden',!marinePrefs.showNewTabGreeting);
+ const activeTab=typeof cur==='function'?cur():null,newPage=$('uvNewPage');if(activeTab&&!activeTab.url&&newPage)newPage.classList.toggle('hidden',marinePrefs.newTabPage==='blank');
+ marinePrefs.clock24?store.set('clock24',true):store.set('clock24',false);store.set('seconds',!!marinePrefs.clockSeconds);
+ const cb24=$('toggleClock24'),cbs=$('toggleSeconds');if(cb24)cb24.checked=!!marinePrefs.clock24;if(cbs)cbs.checked=!!marinePrefs.clockSeconds;
+ if(typeof bEng!=='undefined'){bEng=marinePrefs.searchEngine;store.set('uvEngine',bEng);const sel=$('bEngine');if(sel)sel.value=bEng}
+ const bookToggle=$('toggleBookBar');if(bookToggle)bookToggle.checked=!!marinePrefs.showBookmarks;
+ const bright=Number(marinePrefs.screenBrightness),night=Number(marinePrefs.nightLight);
+ if(typeof A!=='undefined'){A.bright=bright;A.night=night;const dBright=$('dBright'),dNight=$('dNight');if(dBright)dBright.value=bright;if(dNight)dNight.value=night;if(typeof applyA11y==='function')applyA11y()}
+ applyMarineAccent();updateMarineWallpaper();updateMarineClock();configureMarineDock();resetMarineIdleTimer();
+ tabs.forEach(tab=>{tab.zoom=Number(marinePrefs.defaultZoom||100)/100;applyZoom(tab);applyMarineFramePrefs(tab.f,false)});
+ applyMarineFramePrefs(gf,true);
+ const loader=$('iframeLoader');if(loader&&!marinePrefs.showGameLoader)loader.style.display='none';
+ const search=$('marine-pref-searchEngine');if(search)search.value=marinePrefs.searchEngine;
+}
+function runMarinePrefAction(action){
+ if(action==='all'&&!confirm('Clear all saved Browser history and bookmarks?'))return;
+ if(action==='history'){bHist.length=0;store.set('uvHist',[])}
+ if(action==='bookmarks'){bBook.length=0;store.set('uvBook',[])}
+ if(action==='all'){bHist.length=0;bBook.length=0;store.set('uvHist',[]);store.set('uvBook',[])}
+ saveB();renderNewPage();renderBookBar();if(sideMode)renderSide();
+ const label=action==='history'?'Browser history cleared.':action==='bookmarks'?'Bookmarks cleared.':'Browser history and bookmarks cleared.';
+ alert(label);
+}
+function setMarinePref(id,value){
+ const def=marinePrefDefs.find(d=>d.id===id);if(!def)return;
+ if(def.type==='range')value=Number(value);
+ marinePrefs[id]=value;store.set('prefSettings',marinePrefs);
+ if(id==='themePreset')applyTheme(value);else applyMarinePrefs();
+ const input=$('marine-pref-'+id);if(input){if(def.type==='toggle')input.checked=!!value;else input.value=value}
+}
+function formatMarineOptionValue(def,value){return String(value)+(def.unit||'')}
+renderMarinePrefPages();
+const baseApplyMarineA11y=applyA11y;
+applyA11y=function(){baseApplyMarineA11y();document.documentElement.style.fontSize=(Number(A.text||100)*Number(marinePrefs.uiScale||100)/100)+'%'};
+const baseSetWallpaper=setWallpaper;
+setWallpaper=function(url){baseSetWallpaper(url);marinePrefs.wallpaperUrl=url;store.set('prefSettings',marinePrefs);applyMarinePrefs()};
+const baseApplyTheme=applyTheme;
+applyTheme=function(id){baseApplyTheme(id);marinePrefs.themePreset=id;store.set('prefSettings',marinePrefs);applyMarineAccent();const preset=$('marine-pref-themePreset');if(preset)preset.value=id};
+const baseRenderNewPage=renderNewPage;
+renderNewPage=function(){baseRenderNewPage();updateMarineClock();const r=$('uvRecent');if(r&&r.parentElement)r.parentElement.classList.toggle('hidden',!marinePrefs.showRecent||marinePrefs.privateBrowsing)};
+const baseRenderBookBar=renderBookBar;
+renderBookBar=function(){baseRenderBookBar();const bar=$('uvBookBar');if(bar)bar.classList.toggle('hidden',!marinePrefs.showBookmarks||!bBar||!bBook.length)};
+const baseSyncBar=syncBar;
+syncBar=function(){baseSyncBar();const t=cur();if(t&&!t.url&&marinePrefs.newTabPage==='blank')$('uvNewPage').classList.add('hidden')};
+const baseTabLoaded=tabLoaded;
+tabLoaded=function(tab){if(tab.disposed)return;baseTabLoaded(tab);applyMarineFramePrefs(tab.f,false)};
+const baseNewTab=newTab;
+newTab=function(url){const prior=tidc,result=baseNewTab(url),tab=tabs.find(t=>t.id>prior);if(tab){tab.zoom=Number(marinePrefs.defaultZoom||100)/100;applyZoom(tab);applyMarineFramePrefs(tab.f,false)}return result};
+const baseCloseTab=closeTab;
+closeTab=function(id){const tab=tabs.find(t=>t.id===id);if(tab){tab.disposed=true;clearTimeout(tab.loadT);stopMarineFrame(tab.f)}return baseCloseTab(id)};
+function closeMarineBrowserSession(){disposeMarineBrowser()}
+const baseCloseWindow=closeWindow;
+closeWindow=function(id){
+ if(marinePrefs.confirmClose&&!confirm('Close this app window?'))return;
+ if(id==='browserWindow')closeMarineBrowserSession();
+ if(id==='genericAppWindow')stopMarineFrame($('genericAppIframe'));
+ return baseCloseWindow(id);
+};
+const baseMinimizeWindow=minimizeWindow;
+minimizeWindow=function(id){const result=baseMinimizeWindow(id);if(marinePrefs.pauseOnMinimize){if(id==='browserWindow')tabs.forEach(tab=>{try{tab.f.contentDocument.querySelectorAll('audio,video').forEach(m=>m.pause())}catch(e){}});if(id==='genericAppWindow')try{$('genericAppIframe').contentDocument.querySelectorAll('audio,video').forEach(m=>m.pause())}catch(e){}}return result};
+const baseToggleApp=toggleApp;
+toggleApp=function(id,title){const w=win(id);if(!marinePrefs.minimizeOnDock&&w&&!w.classList.contains('hidden')&&active===id){focusWin(id);return}return baseToggleApp(id,title)};
+const baseLaunchGame=launchGame;
+launchGame=function(title,url,proxy){
+ if(proxy&&marinePrefs.confirmProxyLaunch&&!confirm('Open '+title+' through the configured game connection?'))return Promise.resolve();
+ if(marinePrefs.autoFullscreen){const player=$('iframeWrapper');try{const request=player.requestFullscreen&&player.requestFullscreen();if(request&&request.catch)request.catch(()=>{})}catch(e){}}
+ const result=baseLaunchGame(title,url,proxy);
+ if(!marinePrefs.showGameLoader)$('iframeLoader').style.display='none';
+ applyMarineFramePrefs(gf,true);gf.style.zoom=Number(marinePrefs.gameZoom||100)/100;
+ return result;
+};
+function stopMarineGame(){
+ gameLoadId++;
+ const loader=$('iframeLoader');if(loader)loader.style.display='none';
+ stopMarineFrame(gf);
+}
+gm.addEventListener('close',stopMarineGame);
+gm.addEventListener('cancel',event=>{if(!marinePrefs.escClosesGame)event.preventDefault()});
+$('closeModalBtn').onclick=()=>{stopMarineGame();if(gm.open)gm.close()};
+const baseShowLock=showLock;
+showLock=function(){baseShowLock();if($('lockScreenBg'))$('lockScreenBg').style.setProperty('filter','blur('+Number(marinePrefs.lockBlur||0)+'px)','important')};
+document.addEventListener('pointermove',event=>{
+ const edge=marinePrefs.dockPosition==='left'?event.clientX<60:marinePrefs.dockPosition==='right'?event.clientX>innerWidth-60:event.clientY>innerHeight-60;
+ if(marinePrefs.dockAutoHide)setMarineDockVisibility(edge);else setMarineDockVisibility(true);
+});
+document.addEventListener('pointerdown',resetMarineIdleTimer,{passive:true});
+document.addEventListener('keydown',resetMarineIdleTimer,{passive:true});
+document.addEventListener('wheel',resetMarineIdleTimer,{passive:true});
+window.addEventListener('blur',()=>{if(marinePrefs.dockAutoHide)setMarineDockVisibility(false)});
+document.addEventListener('click',event=>{
+ if(!marinePrefs.confirmExternalLinks)return;
+ const anchor=event.target.closest&&event.target.closest('a[href]');if(!anchor)return;
+ let target;try{target=new URL(anchor.href,location.href)}catch(e){return}
+ if(target.origin===location.origin)return;
+ event.preventDefault();event.stopPropagation();
+ if(confirm('Open this external website in a new tab?'))window.open(target.href,'_blank','noopener,noreferrer');
+},true);
+window.addEventListener('beforeunload',()=>{
+ if(marinePrefs.restoreWindows){const visible=$$('.os-window').filter(w=>!w.classList.contains('hidden')).map(w=>w.id);store.set('restoreWindowIds',visible)}
+ else store.set('restoreWindowIds',[]);
+});
+if(marinePrefs.restoreWindows){const restore=store.get('restoreWindowIds',[]);if(Array.isArray(restore))setTimeout(()=>restore.forEach(id=>{if(win(id))openWindow(id,id==='browserWindow'?'Browser':'App')}),450)}
+[['bEngine','searchEngine'],['toggleBookBar','showBookmarks'],['toggleClock24','clock24'],['toggleSeconds','clockSeconds']].forEach(([id,key])=>{const el=$(id);if(el)el.addEventListener('change',()=>setMarinePref(key,id==='bEngine'?el.value:el.checked))});
+[['dBright','screenBrightness'],['dNight','nightLight']].forEach(([id,key])=>{const el=$(id);if(el)el.addEventListener('input',()=>setMarinePref(key,Number(el.value)))});
+[['toggleReduceMotion','reduceMotion'],['toggleReduceTransparency','reduceTransparency']].forEach(([id,key])=>{const el=$(id);if(el)el.addEventListener('change',()=>setMarinePref(key,el.checked))});
+if(window.matchMedia){const mq=matchMedia('(prefers-color-scheme: light)');if(mq.addEventListener)mq.addEventListener('change',applyMarinePrefs)}
+applyMarinePrefs();
+setInterval(updateMarineClock,1000);
 </script>
 </body>
 </html>
