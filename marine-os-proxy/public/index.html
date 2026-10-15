@@ -2402,6 +2402,7 @@ applyMarinePrefs();
 setInterval(updateMarineClock,1000);
 </script>
 
+
 <style id="marine-desktop-features">
 /* Marine OS desktop additions */
 .marine-popover{
@@ -2688,7 +2689,7 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
   const baseOpenGeneric=openGeneric;
   openGeneric=function(name,icon,url,html){recordRecent('tool:'+encodeURIComponent(name));return baseOpenGeneric(name,icon,url,html)};
   const baseLaunchGame=launchGame;
-  launchGame=function(name,url,proxy){recordRecent('game:'+encodeURIComponent(name));return baseLaunchGame(name,url,proxy)};
+  launchGame=function(name,url,proxy){recordRecent('game:'+encodeURIComponent(name));const result=baseLaunchGame(name,url,proxy);requestAnimationFrame(renderTaskbarPins);return result};
  }
  marineWrapOpeners();
 
@@ -2752,7 +2753,8 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
   if(!dynamicDock)return;
   dynamicDock.replaceChildren();
   const staticKeys=new Set(qsa('.dock-item[data-target]',dock).map(el=>el.dataset.marineKey).filter(Boolean));
-  taskbarPins.filter(k=>!staticKeys.has(k)).forEach(k=>{
+  const runningKeys=[];const generic=$('genericAppWindow');if(generic&&!generic.classList.contains('hidden'))runningKeys.push('tool:'+encodeURIComponent($('genericAppTitle').textContent));const gameDialog=$('gameModal');if(gameDialog&&gameDialog.open)runningKeys.push('game:'+encodeURIComponent($('gameModalTitle').textContent));
+  Array.from(new Set(taskbarPins.concat(runningKeys))).filter(k=>!staticKeys.has(k)).forEach(k=>{
    const it=available.find(i=>keyFor(i)===k);if(!it)return;
    const wrap=document.createElement('div');wrap.className='relative group flex flex-col items-center justify-center dock-item';wrap.dataset.marineKey=k;wrap.dataset.dynamicDock='1';
    const button=document.createElement('button');button.type='button';button.title=it.name;const size=Number(marinePrefs.dockIconSize||46);button.style.width=size+'px';button.style.height=size+'px';button.style.fontSize=Math.round(size*.44)+'px';
@@ -2768,6 +2770,7 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
  const marineBaseUpdateDock=updateDock;
  updateDock=function(){marineBaseUpdateDock();renderTaskbarPins()};
  renderTaskbarPins();
+ const gameDialog=$('gameModal');if(gameDialog)gameDialog.addEventListener('close',renderTaskbarPins);
  window.marinePinItem=(k,where)=>{
   if(where==='start'){startPins=startPins.includes(k)?startPins.filter(x=>x!==k):[k].concat(startPins);saveStartPins();if(window.marineStartRender)window.marineStartRender()}
   else{taskbarPins=taskbarPins.includes(k)?taskbarPins.filter(x=>x!==k):taskbarPins.concat(k);savePins();renderTaskbarPins()}
@@ -2884,8 +2887,10 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
   switcher.classList.remove('hidden')
  }
  function showSwitcher(cycle){
+  const wasOpen=!!switcher&&!switcher.classList.contains('hidden');
   buildSwitcher();if(!switcherCards.length){closeSwitcher();return}
-  if(cycle){switcherIndex=(switcherIndex+1)%switcherCards.length}
+  if(!wasOpen){const current=switcherCards.findIndex(w=>w.id===active);switcherIndex=Math.max(0,current)}
+  if(cycle)switcherIndex=(switcherIndex+1)%switcherCards.length;
   updateSwitcherSelection()
  }
  function updateSwitcherSelection(){
@@ -2895,7 +2900,7 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
  function closeSwitcher(){if(switcher)switcher.classList.add('hidden')}
  function commitSwitcher(){const w=switcherCards[switcherIndex];closeSwitcher();if(w)openWindow(w.id,w.id==='genericAppWindow'?$('genericAppTitle').textContent:(appById(w.id)||{}).name)}
  document.addEventListener('keydown',e=>{
-  if(e.key==='Tab'&&e.altKey){e.preventDefault();showSwitcher(!!switcher&&!switcher.classList.contains('hidden'));return}
+  if(e.key==='Tab'&&e.altKey){e.preventDefault();showSwitcher(true);return}
   if(switcher&&!switcher.classList.contains('hidden')){
    if(e.key==='Escape'){e.preventDefault();closeSwitcher();return}
    if(e.key==='Enter'){e.preventDefault();commitSwitcher();return}
@@ -2944,7 +2949,7 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
  document.addEventListener('keydown',e=>{
   const mod=e.ctrlKey||e.metaKey;
   if(!mod)return;
-  const win=$('browserWindow');if(!win||win.classList.contains('hidden'))return;
+  const win=$('browserWindow');if(!win||win.classList.contains('hidden')||(active!=='browserWindow'&&!(e.target.closest&&e.target.closest('#browserWindow'))))return;
   const tag=(e.target&&e.target.tagName||'').toLowerCase();
   if(['input','textarea','select'].includes(tag)&&e.key.toLowerCase()!=='l'&&e.key.toLowerCase()!=='t'&&!(e.shiftKey&&e.key.toLowerCase()==='t'))return;
   const k=e.key.toLowerCase();
