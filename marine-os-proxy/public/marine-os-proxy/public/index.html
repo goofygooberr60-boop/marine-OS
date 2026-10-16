@@ -2953,5 +2953,528 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
  if(typeof applyMarinePrefs==='function')applyMarinePrefs();
 })();
 </script>
+<style id="marine-os-feature-suite-style">
+.marine-feature-panel{position:fixed;top:35px;right:12px;z-index:99990;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 52px);overflow:auto;padding:16px;border:1px solid rgba(111,196,181,.2);border-radius:16px;background:rgba(8,22,27,.96);color:#e8f4f1;box-shadow:0 22px 70px rgba(0,0,0,.55);backdrop-filter:blur(24px);font:13px/1.45 Inter,system-ui,sans-serif}
+.marine-feature-panel[hidden]{display:none!important}
+.marine-feature-panel h3{margin:0;color:#f0faf7;font-size:15px}
+.marine-feature-panel .mf-sub{margin:4px 0 12px;color:#94aaa4;font-size:11px}
+.marine-feature-panel button,.marine-feature-panel select,.marine-feature-panel input{font:inherit}
+.mf-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.07)}
+.mf-row:first-child{border-top:0}
+.mf-row small{display:block;color:#91a6a1;font-size:10px}
+.mf-button{border:1px solid rgba(130,205,190,.18);border-radius:9px;background:rgba(255,255,255,.06);color:#eaf7f3;padding:7px 10px;cursor:pointer}
+.mf-button:hover{background:rgba(83,174,157,.2)}
+.mf-primary{background:#14695f;border-color:#258b7d}
+.mf-select,.mf-number{border:1px solid rgba(255,255,255,.12);border-radius:8px;background:#101b1f;color:#edf6f3;padding:6px 8px;max-width:150px}
+.mf-range{width:112px;accent-color:#62c2ad}
+.mf-check{accent-color:#59b9a5}
+.mf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}
+.mf-divider{height:1px;background:rgba(255,255,255,.08);margin:12px 0}
+.mf-notice{border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px;margin:7px 0;background:rgba(255,255,255,.035)}
+.mf-notice time{display:block;color:#718c85;font-size:10px;margin-top:4px}
+.mf-empty{padding:20px 8px;text-align:center;color:#9ab0aa}
+.mf-feature-heading{font-size:11px;font-weight:700;color:#8ecabd;text-transform:uppercase;letter-spacing:.1em;margin:15px 0 6px}
+.mf-feature-card{background:rgba(18,36,40,.7);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:13px;margin:9px 0}
+.mf-shortcut{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06)}
+.mf-shortcut:first-child{border-top:0}
+.mf-shortcut code{font:11px ui-monospace,monospace;color:#8dd6c7;background:#102528;padding:4px 7px;border-radius:6px}
+.marine-desk-folder{background:linear-gradient(145deg,rgba(91,177,164,.9),rgba(35,100,99,.9))!important}
+.marine-desk-folder .ico{display:flex;align-items:center;justify-content:center}
+.marine-folder-window{position:fixed;z-index:99980;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100vw - 28px));max-height:75vh;overflow:auto;padding:16px;border:1px solid rgba(112,198,181,.22);border-radius:16px;background:rgba(8,22,27,.97);box-shadow:0 24px 75px rgba(0,0,0,.55);color:#edf8f4}
+.marine-folder-window[hidden]{display:none}
+#marineBrightnessOverlay,#marineNightOverlay{position:fixed;inset:0;z-index:48;pointer-events:none}
+#marineBrightnessOverlay{background:#000;opacity:0}
+#marineNightOverlay{background:#ffae55;opacity:0;mix-blend-mode:soft-light}
+.marine-tile-pinned{color:#83dccb!important}
+.marine-settings-feature-block{margin-top:20px;padding:17px;border:1px solid rgba(112,198,181,.15);border-radius:14px;background:rgba(12,31,34,.58)}
+.marine-settings-feature-block h3{margin:0 0 4px;color:#effaf6;font-size:16px}
+.marine-settings-feature-block p{margin:0 0 12px;color:#9bb2ac;font-size:11px}
+.marine-settings-feature-block label{font-size:11px;color:#bed1cc}
+.marine-settings-feature-block select{border:1px solid rgba(255,255,255,.12);border-radius:8px;background:#101b1f;color:#effaf6;padding:6px}
+.marine-settings-feature-block input[type=checkbox]{accent-color:#54b9a5}
+#desktop-icons .desk-icon{touch-action:none}
+@media(max-width:650px){.marine-feature-panel{right:6px;top:34px;width:min(360px,calc(100vw - 12px));padding:12px}.mf-grid{grid-template-columns:1fr}}
+</style>
+
+<script id="marine-os-feature-suite">
+(function(){
+ 'use strict';
+ const byId=id=>document.getElementById(id), all=(s,r=document)=>Array.from(r.querySelectorAll(s));
+ const safeStore=(key,fallback)=>{try{const value=store.get(key,fallback);return value===undefined?fallback:value}catch(e){return fallback}};
+ const saveStore=(key,value)=>{try{store.set(key,value)}catch(e){}};
+ const panelClass='marine-feature-panel';
+ const featurePanel=(id,title,subtitle)=>{const el=document.createElement('section');el.id=id;el.className=panelClass;el.hidden=true;el.innerHTML='<div class="mf-row" style="border:0;padding-top:0"><div><h3>'+title+'</h3><div class="mf-sub">'+subtitle+'</div></div><button type="button" class="mf-button" data-panel-close aria-label="Close panel">✕</button></div>';document.body.append(el);el.querySelector('[data-panel-close]').addEventListener('click',()=>{el.hidden=true});return el};
+ const button=(label,fn,cls='mf-button')=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.addEventListener('click',fn);return b};
+ const addTopButton=(id,icon,label,fn)=>{const b=document.createElement('button');b.type='button';b.id=id;b.className='marine-feature-top-button';b.title=label;b.setAttribute('aria-label',label);b.innerHTML='<i class="fa-solid '+icon+'"></i>';b.style.cssText='height:23px;min-width:27px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:#dcece8;cursor:pointer;font-size:11px';b.addEventListener('click',fn);const clock=byId('osClock'),right=clock&&clock.parentElement;if(right)right.insertBefore(b,clock);return b};
+ const togglePanel=target=>{[workspacePanel,noticePanel,quickPanel].forEach(p=>{if(p!==target)p.hidden=true});target.hidden=!target.hidden;if(!target.hidden){if(target===workspacePanel)renderWorkspaces();if(target===noticePanel){notices=notices.map(n=>Object.assign({},n,{read:true}));saveStore('marineFeatureNotices',notices);renderNotices()}if(target===quickPanel){syncQuickValues();renderLayouts();renderAudioRows()}}};
+ const workspacePanel=featurePanel('marineWorkspacePanel','Workspaces','Separate open apps into named desks.');
+ const noticePanel=featurePanel('marineNotificationPanel','Notifications','Recent activity from Marine OS.');
+ const quickPanel=featurePanel('marineQuickPanel','Quick settings','Display, audio and saved workspace controls.');
+ addTopButton('marineWorkspaceButton','fa-layer-group','Workspaces',()=>togglePanel(workspacePanel));
+ addTopButton('marineNotificationButton','fa-bell','Notifications',()=>togglePanel(noticePanel));
+ addTopButton('marineQuickButton','fa-sliders','Quick settings',()=>togglePanel(quickPanel));
+ document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('.marine-feature-panel,#marineWorkspaceButton,#marineNotificationButton,#marineQuickButton'))return;[workspacePanel,noticePanel,quickPanel].forEach(p=>p.hidden=true)});
+
+ /* The close X is rebound directly so stale inline handlers cannot swallow a close. */
+ function closeAppWindowFromX(id){
+  const w=byId(id);if(!w)return;
+  try{closeWindow(id)}catch(e){}
+  if(!w.classList.contains('hidden')&&!marinePrefs.confirmClose){
+   if(id==='browserWindow'&&typeof closeMarineBrowserSession==='function')closeMarineBrowserSession();
+   if(id==='genericAppWindow'&&typeof stopMarineFrame==='function')stopMarineFrame(byId('genericAppIframe'));
+   if(typeof baseCloseWindow==='function')baseCloseWindow(id);
+  }
+ }
+ function bindWindowCloseButtons(){
+  all('.os-window button[onclick*="closeWindow"]').forEach(b=>{
+   const w=b.closest('.os-window');if(!w)return;
+   b.removeAttribute('onclick');b.onclick=null;b.type='button';b.setAttribute('aria-label','Close '+w.id.replace('Window','')+' window');b.title='Close window';
+   if(b.dataset.marineCloseBound)return;b.dataset.marineCloseBound='1';
+   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeAppWindowFromX(w.id)},{capture:true});
+  });
+ }
+ bindWindowCloseButtons();
+ const gameDialog=byId('gameModal'),gameFrame=byId('gameModalIframe'),gameClose=byId('closeModalBtn');
+ if(gameClose){gameClose.onclick=null;gameClose.removeAttribute('onclick');gameClose.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();try{gameLoadId++}catch(err){}if(typeof stopMarineFrame==='function')stopMarineFrame(gameFrame);else if(gameFrame)gameFrame.src='about:blank';if(gameDialog&&gameDialog.open)gameDialog.close();const loader=byId('iframeLoader');if(loader)loader.style.display='none'},{capture:true})}
+
+ /* Notifications */
+ let notices=safeStore('marineFeatureNotices',[]);
+ if(!Array.isArray(notices))notices=[];
+ window.marineNotify=(title,message,icon='fa-anchor')=>{
+  notices.unshift({title:String(title||'Marine OS'),message:String(message||''),icon:String(icon),time:Date.now(),read:false});
+  notices=notices.slice(0,40);saveStore('marineFeatureNotices',notices);renderNotices();
+ };
+ function renderNotices(){
+  const body=noticePanel.querySelector('.mf-notices')||document.createElement('div');body.className='mf-notices';body.replaceChildren();
+  if(!notices.length){const empty=document.createElement('div');empty.className='mf-empty';empty.textContent='You’re all caught up.';body.append(empty)}
+  notices.forEach((n,index)=>{const row=document.createElement('article');row.className='mf-notice';const head=document.createElement('div');head.style.cssText='display:flex;gap:9px;align-items:flex-start';const ico=document.createElement('i');ico.className='fa-solid '+n.icon;ico.style.color='#76cdbc';const copy=document.createElement('div');const title=document.createElement('strong');title.textContent=n.title;const msg=document.createElement('div');msg.textContent=n.message;msg.style.cssText='color:#b0c3bd;margin-top:3px';const time=document.createElement('time');time.textContent=new Date(n.time).toLocaleString();const remove=button('Dismiss',()=>{notices.splice(index,1);saveStore('marineFeatureNotices',notices);renderNotices()});copy.append(title,msg,time);head.append(ico,copy);row.append(head,remove);body.append(row)});
+  const clear=button('Clear all',()=>{notices=[];saveStore('marineFeatureNotices',notices);renderNotices()});noticePanel.append(body);noticePanel.querySelectorAll('.mf-notices').forEach((el,i)=>{if(i>0)el.remove()});if(!noticePanel.querySelector('[data-clear-notices]')){clear.dataset.clearNotices='1';noticePanel.append(clear)}
+  const unread=notices.some(n=>!n.read);const top=byId('marineNotificationButton');if(top){top.classList.toggle('marine-tile-pinned',unread);top.setAttribute('aria-label',unread?'Notifications, unread items':'Notifications')}
+ }
+
+ /* Virtual desks keep each app window alive while it is hidden on another desk. */
+ let desks=safeStore('marineVirtualDesks',[{id:'desk-1',name:'Desk 1',windows:[]}]);
+ if(!Array.isArray(desks)||!desks.length)desks=[{id:'desk-1',name:'Desk 1',windows:[]}];
+ desks=desks.slice(0,5).map((d,i)=>({id:String(d.id||('desk-'+(i+1))),name:String(d.name||('Desk '+(i+1))),windows:Array.isArray(d.windows)?d.windows.filter(x=>typeof x==='string'):[]}));
+ let activeDesk=safeStore('marineActiveDesk',desks[0].id);if(!desks.some(d=>d.id===activeDesk))activeDesk=desks[0].id;
+ const deskHome=safeStore('marineDeskHomes',{});
+ const currentDesk=()=>desks.find(d=>d.id===activeDesk)||desks[0];
+ const saveDesks=()=>{saveStore('marineVirtualDesks',desks);saveStore('marineActiveDesk',activeDesk);saveStore('marineDeskHomes',deskHome)};
+ const removeWindowFromDesks=id=>{desks.forEach(d=>d.windows=d.windows.filter(x=>x!==id));delete deskHome[id];saveDesks()};
+ function switchDesk(id){
+  if(!desks.some(d=>d.id===id)||id===activeDesk)return;
+  const previous=currentDesk();
+  all('.os-window').forEach(w=>{if(!w.classList.contains('hidden')&&!previous.windows.includes(w.id))previous.windows.push(w.id)});
+  all('.os-window').forEach(w=>w.classList.add('hidden'));
+  activeDesk=id;const destination=currentDesk();
+  destination.windows.forEach(wid=>{const w=byId(wid);if(w)w.classList.remove('hidden');deskHome[wid]=id});
+  saveDesks();if(typeof updateDock==='function')updateDock();
+  const top=destination.windows.map(wid=>byId(wid)).filter(w=>w&&!w.classList.contains('hidden')).sort((a,b)=>(Number(b.style.zIndex)||0)-(Number(a.style.zIndex)||0))[0];
+  if(top&&typeof focusWin==='function')focusWin(top.id);else if(typeof setActive==='function')setActive(null);
+  renderWorkspaces();if(typeof window.marineNotify==='function')window.marineNotify('Workspace changed','Now on '+destination.name,'fa-layer-group');
+ }
+ const baseOpenForDesks=openWindow;
+ openWindow=function(id,title){
+  const w=byId(id);if(w){const old=deskHome[id];if(old&&old!==activeDesk)desks.forEach(d=>d.windows=d.windows.filter(x=>x!==id));deskHome[id]=activeDesk;if(!currentDesk().windows.includes(id))currentDesk().windows.push(id)}
+  const result=baseOpenForDesks(id,title);saveDesks();return result;
+ };
+ const baseCloseForDesks=closeWindow;
+ closeWindow=function(id){
+  const result=baseCloseForDesks(id);const w=byId(id);if(!w||w.classList.contains('hidden'))removeWindowFromDesks(id);return result;
+ };
+ const baseMinimizeForDesks=minimizeWindow;
+ minimizeWindow=function(id){const result=baseMinimizeForDesks(id);removeWindowFromDesks(id);return result};
+ function renderWorkspaces(){
+  let content=workspacePanel.querySelector('.mf-workspace-content');
+  if(!content){content=document.createElement('div');content.className='mf-workspace-content';workspacePanel.append(content)}
+  content.replaceChildren();
+  desks.forEach(d=>{
+   const row=document.createElement('div');row.className='mf-row';
+   const left=document.createElement('div');const name=document.createElement('strong');name.textContent=d.name;
+   const count=document.createElement('small');count.textContent=d.windows.length+' open app'+(d.windows.length===1?'':'s');left.append(name,count);
+   const actions=document.createElement('div');actions.style.cssText='display:flex;gap:4px';
+   actions.append(button(d.id===activeDesk?'Here':'Switch',()=>switchDesk(d.id),d.id===activeDesk?'mf-button mf-primary':'mf-button'));
+   actions.append(button('Rename',()=>{const value=prompt('Name this workspace',d.name);if(value&&value.trim()){d.name=value.trim().slice(0,32);saveDesks();renderWorkspaces()}}));
+   if(desks.length>1)actions.append(button('Remove',()=>{
+    if(!confirm('Remove '+d.name+'? Its windows will move to another workspace.'))return;
+    const destination=desks.find(x=>x.id!==d.id);if(!destination)return;
+    d.windows.forEach(wid=>{if(!destination.windows.includes(wid))destination.windows.push(wid);deskHome[wid]=destination.id});
+    desks=desks.filter(x=>x.id!==d.id);
+    if(activeDesk===d.id){activeDesk=destination.id;all('.os-window').forEach(w=>w.classList.add('hidden'));destination.windows.forEach(wid=>{const w=byId(wid);if(w)w.classList.remove('hidden')});const top=destination.windows.map(wid=>byId(wid)).filter(w=>w&&!w.classList.contains('hidden')).sort((a,b)=>(Number(b.style.zIndex)||0)-(Number(a.style.zIndex)||0))[0];if(top)focusWin(top.id);else if(typeof setActive==='function')setActive(null);if(typeof updateDock==='function')updateDock()}
+    saveDesks();renderWorkspaces()
+   }));
+   row.append(left,actions);content.append(row)
+  });
+  const add=button(desks.length>=5?'Maximum 5 workspaces':'＋ New workspace',()=>{
+   if(desks.length>=5)return;const name=prompt('Name the new workspace','Desk '+(desks.length+1));if(!name||!name.trim())return;
+   const d={id:'desk-'+Date.now(),name:name.trim().slice(0,32),windows:[]};desks.push(d);saveDesks();switchDesk(d.id);renderWorkspaces()
+  },'mf-button mf-primary');content.append(add);
+  const move=document.createElement('div');move.className='mf-row mf-move-active';const title=document.createElement('span');title.textContent='Move active window';
+  const select=document.createElement('select');select.className='mf-select';select.id='marineMoveWindowDesk';
+  desks.filter(d=>d.id!==activeDesk).forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name;select.append(o)});
+  const go=button('Move',()=>{const id=active;const target=select.value;if(!id||!target||target===activeDesk)return;desks.forEach(d=>d.windows=d.windows.filter(x=>x!==id));deskHome[id]=target;const dest=desks.find(d=>d.id===target);if(dest&&!dest.windows.includes(id))dest.windows.push(id);const w=byId(id);if(w)w.classList.add('hidden');saveDesks();switchDesk(target);renderWorkspaces()});
+  move.append(title,select,go);move.hidden=!all('.os-window').some(w=>!w.classList.contains('hidden'))||desks.length<2;content.append(move);
+ }
+ /* Desktop folders and draggable icon placement. */
+ const desktop=byId('desktop'),iconWrap=byId('desktop-icons');
+ let iconPositions=safeStore('marineDesktopIconPositions',{});
+ let folders=safeStore('marineDesktopFolders',[]);
+ if(!Array.isArray(folders))folders=[];
+ const catalogItems=()=>{
+  const result=(APPS||[]).map(a=>({key:'app:'+a.id,name:a.name,icon:a.icon,type:'app',id:a.id}));
+  (TOOLS||[]).forEach(t=>result.push({key:'tool:'+t.name,name:t.name,icon:t.icon,type:'tool',nameArg:t.name,html:t.html}));
+  try{catalog().forEach(g=>result.push({key:'game:'+g.name,name:g.name,icon:g.icon||g.ic||'fa-solid fa-gamepad',type:'game',url:g.url,proxy:g.proxy}))}catch(e){}
+  return result;
+ };
+ const desktopItemByKey=key=>catalogItems().find(i=>i.key===key);
+ function runDesktopItem(item){
+  if(!item)return;
+  if(item.type==='app')openWindow(item.id,item.name);
+  else if(item.type==='tool')openGeneric(item.name,item.icon,null,item.html);
+  else if(item.type==='game')launchGame(item.name,item.url,item.proxy);
+ }
+ const applyPosition=(el,key)=>{
+  const pos=iconPositions[key];if(!pos||!el)return;
+  el.style.position='fixed';el.style.left=Math.max(0,Number(pos.x)||0)+'px';el.style.top=Math.max(30,Number(pos.y)||0)+'px';el.style.zIndex='14';
+ };
+ function persistPosition(key,el){
+  const r=el.getBoundingClientRect();iconPositions[key]={x:Math.max(0,Math.min(innerWidth-r.width,r.left)),y:Math.max(30,Math.min(innerHeight-r.height,r.top))};saveStore('marineDesktopIconPositions',iconPositions);
+ }
+ function bindDrag(el,key){
+  if(!el||el.dataset.marineDragBound)return;el.dataset.marineDragBound='1';
+  applyPosition(el,key);
+  let dragging=null,moved=false;
+  el.addEventListener('pointerdown',e=>{
+   if(e.button!==0)return;
+   const r=el.getBoundingClientRect();dragging={x:e.clientX,y:e.clientY,left:r.left,top:r.top,pointer:e.pointerId};try{el.setPointerCapture(e.pointerId)}catch(err){}moved=false;
+  });
+  el.addEventListener('pointermove',e=>{
+   if(!dragging||e.pointerId!==dragging.pointer)return;
+   const dx=e.clientX-dragging.x,dy=e.clientY-dragging.y;if(Math.abs(dx)+Math.abs(dy)<7)return;
+   moved=true;el.style.position='fixed';el.style.left=Math.max(0,Math.min(innerWidth-el.offsetWidth,dragging.left+dx))+'px';el.style.top=Math.max(30,Math.min(innerHeight-el.offsetHeight,dragging.top+dy))+'px';el.style.zIndex='14';e.preventDefault();
+  });
+  el.addEventListener('pointerup',e=>{
+   if(!dragging)return;
+   if(moved){
+    persistPosition(key,el);
+    const target=document.elementFromPoint(e.clientX,e.clientY);
+    const folderTile=target&&target.closest&&target.closest('.marine-folder-icon');
+    const appId=el.dataset.marineAppId;
+    if(folderTile&&appId){putAppInFolder(appId,folderTile.dataset.folderId);renderFolders()}
+    el.dataset.marineDragged='1';setTimeout(()=>{delete el.dataset.marineDragged},300);
+   }
+   dragging=null;
+  });
+  el.addEventListener('click',e=>{if(el.dataset.marineDragged){e.preventDefault();e.stopImmediatePropagation();delete el.dataset.marineDragged}},{capture:true});
+ }
+ function persistFolders(){saveStore('marineDesktopFolders',folders)}
+ function ensureFolderPanel(){
+  let p=byId('marineFolderWindow');if(p)return p;
+  p=document.createElement('section');p.id='marineFolderWindow';p.className='marine-folder-window';p.hidden=true;document.body.append(p);return p;
+ }
+ function openFolder(folderId){
+  const folder=folders.find(f=>f.id===folderId);if(!folder)return;
+  const panel=ensureFolderPanel();panel.replaceChildren();
+  const header=document.createElement('div');header.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px';
+  const title=document.createElement('h3');title.textContent=folder.name;title.style.cssText='font-size:17px;margin:0';
+  const close=button('Close',()=>{panel.hidden=true});header.append(title,close);panel.append(header);
+  const itemsBox=document.createElement('div');itemsBox.className='mf-grid';
+  folder.members.forEach(key=>{
+   const item=desktopItemByKey(key);if(!item)return;
+   const card=document.createElement('div');card.className='mf-feature-card';card.style.margin='0';
+   const launch=button(item.name,()=>runDesktopItem(item),'mf-button mf-primary');const remove=button('Remove',()=>{folder.members=folder.members.filter(k=>k!==key);persistFolders();openFolder(folderId);renderFolders()});
+   card.append(launch,remove);itemsBox.append(card);
+  });
+  if(!folder.members.length){const empty=document.createElement('div');empty.className='mf-empty';empty.textContent='This folder is empty. Add an app below.';itemsBox.append(empty)}
+  panel.append(itemsBox);
+  const addRow=document.createElement('div');addRow.className='mf-row';const select=document.createElement('select');select.className='mf-select';
+  catalogItems().filter(i=>!folder.members.includes(i.key)).forEach(i=>{const o=document.createElement('option');o.value=i.key;o.textContent=i.name;select.append(o)});
+  const add=button('Add app',()=>{if(!select.value)return;folder.members.push(select.value);persistFolders();openFolder(folderId);renderFolders()},'mf-button mf-primary');addRow.append(select,add);panel.append(addRow);panel.hidden=false;
+ }
+ function putAppInFolder(appId,folderId){
+  const folder=folders.find(f=>f.id===folderId);if(!folder)return;
+  const key='app:'+appId;if(!folder.members.includes(key))folder.members.push(key);persistFolders();
+ }
+ function createFolder(name){
+  const folder={id:'folder-'+Date.now(),name:String(name||'New folder').trim().slice(0,32)||'New folder',members:[]};folders.push(folder);persistFolders();renderFolders();return folder;
+ }
+ function renderFolders(){
+  all('.marine-folder-icon').forEach(el=>el.remove());
+  folders.forEach((folder,index)=>{
+   const tile=document.createElement('div');tile.className='desk-icon marine-folder-icon';tile.dataset.folderId=folder.id;tile.innerHTML='<div class="ico marine-desk-folder"><i class="fa-solid fa-folder"></i></div><span></span>';tile.querySelector('span').textContent=folder.name;
+   tile.title='Double-click to open · Right-click for folder options';
+   tile.addEventListener('click',e=>{e.stopPropagation();all('.desk-icon').forEach(x=>x.classList.remove('sel'));tile.classList.add('sel');if(matchMedia('(pointer:coarse)').matches)openFolder(folder.id)});
+   tile.addEventListener('dblclick',e=>{e.preventDefault();openFolder(folder.id)});
+   tile.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();showContext(e.clientX,e.clientY,[
+    {label:'Open folder',run:()=>openFolder(folder.id)},
+    {label:'Rename folder',run:()=>{const name=prompt('Folder name',folder.name);if(name&&name.trim()){folder.name=name.trim().slice(0,32);persistFolders();renderFolders()}}},
+    {label:'Delete folder',run:()=>{if(!confirm('Delete this folder? Its apps will return to the desktop.'))return;folders=folders.filter(f=>f.id!==folder.id);persistFolders();renderFolders()}}
+   ])});
+   if(iconWrap)iconWrap.append(tile);bindDrag(tile,'folder:'+folder.id);
+  });
+  all('#desktop-icons .desk-icon[data-marine-app-id]').forEach(el=>{const id=el.dataset.marineAppId;el.hidden=folders.some(f=>f.members.includes('app:'+id))});
+ }
+ function showContext(x,y,options){
+  all('.marine-icon-context').forEach(n=>n.remove());
+  const menu=document.createElement('div');menu.className='marine-icon-context';menu.style.cssText='position:fixed;z-index:100000;left:'+Math.max(6,Math.min(x,innerWidth-210))+'px;top:'+Math.max(30,Math.min(y,innerHeight-190))+'px;width:198px;padding:5px;border:1px solid rgba(120,200,185,.2);border-radius:11px;background:rgba(8,22,27,.98);box-shadow:0 15px 45px rgba(0,0,0,.5);color:#edf8f4';
+  options.forEach(o=>{const b=document.createElement('button');b.type='button';b.textContent=o.label;b.style.cssText='display:block;width:100%;text-align:left;padding:8px 10px;border:0;border-radius:7px;background:transparent;color:#edf8f4;cursor:pointer;font:12px Inter,system-ui';b.addEventListener('mouseenter',()=>b.style.background='rgba(90,179,160,.18)');b.addEventListener('mouseleave',()=>b.style.background='transparent');b.addEventListener('click',()=>{menu.remove();o.run()});menu.append(b)});
+  document.body.append(menu);const dismiss=e=>{if(!menu.contains(e.target)){menu.remove();document.removeEventListener('pointerdown',dismiss)}};setTimeout(()=>document.addEventListener('pointerdown',dismiss),0);
+ }
+ function bindIconMenus(){
+  all('#desktop-icons .desk-icon').forEach(el=>{
+   if(el.classList.contains('marine-folder-icon')||el.dataset.marineMenuBound)return;el.dataset.marineMenuBound='1';
+   const app=APPS.find(a=>a.name===el.querySelector('span')?.textContent?.trim());if(app)el.dataset.marineAppId=app.id;
+   const key=app?'app:'+app.id:null;
+   el.addEventListener('contextmenu',e=>{
+    e.preventDefault();e.stopPropagation();
+    const options=[{label:'Create a folder',run:()=>{const name=prompt('New folder name','New folder');if(name&&name.trim())createFolder(name)}}];
+    if(app)options.push({label:'Move to a folder…',run:()=>{if(!folders.length)createFolder('New folder');const choice=prompt('Enter a folder name:\n'+folders.map(f=>f.name).join('\n'),folders[0].name);const folder=folders.find(f=>f.name.toLowerCase()===String(choice||'').toLowerCase());if(folder){putAppInFolder(app.id,folder.id);renderFolders()}}});
+    options.push({label:'Reset icon position',run:()=>{delete iconPositions[key||('folder:'+el.dataset.folderId)];saveStore('marineDesktopIconPositions',iconPositions);el.style.position='';el.style.left='';el.style.top=''}});
+    showContext(e.clientX,e.clientY,options);
+   });
+   bindDrag(el,key||('folder:'+el.dataset.folderId));
+  });
+ }
+ all('#desktop-icons .desk-icon').forEach(el=>{const app=APPS.find(a=>a.name===el.querySelector('span')?.textContent?.trim());if(app)el.dataset.marineAppId=app.id;bindDrag(el,app?'app:'+app.id:'desktop-item')});
+ renderFolders();bindIconMenus();
+ if(desktop)desktop.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.desk-icon'))return;e.preventDefault();showContext(e.clientX,e.clientY,[{label:'New folder',run:()=>{const name=prompt('New folder name','New folder');if(name&&name.trim())createFolder(name)}},{label:'Reset icon layout',run:()=>{iconPositions={};saveStore('marineDesktopIconPositions',iconPositions);all('#desktop-icons .desk-icon').forEach(el=>{el.style.position='';el.style.left='';el.style.top=''})}},{label:'Add app to desktop folder',run:()=>{if(!folders.length)createFolder('Apps');openFolder(folders[0].id)}}])});
+
+ /* Saved window layouts. */
+ let layouts=safeStore('marineWorkspaceLayouts',[]);if(!Array.isArray(layouts))layouts=[];
+ const layoutSelect=()=>byId('marineLayoutSelect');
+ function saveCurrentLayout(){
+  const name=prompt('Name this layout','Ocean workspace');if(!name||!name.trim())return;
+  const windows=currentDesk().windows.map(id=>byId(id)).filter(w=>w&&!w.classList.contains('hidden')).map(w=>{const r=w.getBoundingClientRect();return{id:w.id,left:Math.round(r.left),top:Math.round(r.top),width:Math.round(r.width),height:Math.round(r.height),maximized:w.classList.contains('maximized'),snap:w.dataset.marineSnap||''}});
+  const existing=layouts.findIndex(l=>l.name.toLowerCase()===name.trim().toLowerCase());
+  const entry={id:'layout-'+Date.now(),name:name.trim().slice(0,40),deskId:activeDesk,windows:windows};
+  if(existing>=0)layouts[existing]=entry;else layouts.unshift(entry);
+  layouts=layouts.slice(0,20);saveStore('marineWorkspaceLayouts',layouts);renderLayouts();window.marineNotify('Layout saved',entry.name+' is ready to restore.','fa-table-columns');
+ }
+ function renderLayouts(){
+  const select=layoutSelect();if(!select)return;const chosen=select.value;select.replaceChildren();
+  if(!layouts.length){const o=document.createElement('option');o.value='';o.textContent='No saved layouts';select.append(o)}
+  layouts.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=l.name;select.append(o)});
+  if(layouts.some(l=>l.id===chosen))select.value=chosen;
+ }
+ function restoreLayout(){
+  const l=layouts.find(x=>x.id===layoutSelect()?.value);if(!l)return;
+  if(l.deskId&&desks.some(d=>d.id===l.deskId)&&activeDesk!==l.deskId)switchDesk(l.deskId);
+  const d=currentDesk();d.windows.slice().forEach(id=>{const w=byId(id);if(w)w.classList.add('hidden')});d.windows=[];
+  l.windows.forEach(item=>{const w=byId(item.id);if(!w)return;openWindow(item.id);w.classList.remove('hidden');w.classList.remove('maximized');if(item.maximized)w.classList.add('maximized');w.dataset.marineSnap=item.snap||'';w.style.position='fixed';w.style.left=item.left+'px';w.style.top=item.top+'px';w.style.width=item.width+'px';w.style.height=item.height+'px'});
+  saveDesks();if(typeof updateDock==='function')updateDock();window.marineNotify('Layout restored',l.name,'fa-table-columns');
+ }
+ function deleteLayout(){
+  const id=layoutSelect()?.value;if(!id)return;const l=layouts.find(x=>x.id===id);if(!l||!confirm('Delete layout “'+l.name+'”?'))return;layouts=layouts.filter(x=>x.id!==id);saveStore('marineWorkspaceLayouts',layouts);renderLayouts();
+ }
+ quickPanel.insertAdjacentHTML('beforeend','<div class="mf-feature-heading">Display</div><div class="mf-row"><label for="marineQuickBrightness">Brightness <small id="marineBrightnessValue"></small></label><input id="marineQuickBrightness" class="mf-range" type="range" min="45" max="100" step="1"></div><div class="mf-row"><label for="marineQuickNight">Night light <small id="marineNightValue"></small></label><input id="marineQuickNight" class="mf-range" type="range" min="0" max="80" step="1"></div><div class="mf-feature-heading">Game audio</div><div class="mf-row"><label for="marineQuickGameMute">Mute embedded games</label><input id="marineQuickGameMute" class="mf-check" type="checkbox"></div><div class="mf-row"><label for="marineQuickGameVolume">Game volume <small id="marineGameVolumeValue"></small></label><input id="marineQuickGameVolume" class="mf-range" type="range" min="0" max="100" step="1"></div><div class="mf-feature-heading">Saved layouts</div><div class="mf-row"><select id="marineLayoutSelect" class="mf-select" style="flex:1"></select><button id="marineRestoreLayout" class="mf-button mf-primary">Restore</button></div><div class="mf-grid"><button id="marineSaveLayout" class="mf-button">Save current</button><button id="marineDeleteLayout" class="mf-button">Delete selected</button><button id="marineOpenThemeStudio" class="mf-button">Theme Studio</button><button id="marineOpenShortcuts" class="mf-button">Keyboard</button></div><div class="mf-feature-heading">Per-app audio</div><div class="mf-sub">These controls work when the embedded page allows Marine OS to reach its audio player. Some external sites block that access.</div><div id="marineAudioRows"></div>');
+ const brightnessSlider=byId('marineQuickBrightness'),nightSlider=byId('marineQuickNight'),gameMute=byId('marineQuickGameMute'),gameVolume=byId('marineQuickGameVolume');
+ function syncQuickValues(){
+  if(brightnessSlider){brightnessSlider.value=String(Number(A.bright??100));byId('marineBrightnessValue').textContent=brightnessSlider.value+'%'}
+  if(nightSlider){nightSlider.value=String(Number(A.night??0));byId('marineNightValue').textContent=nightSlider.value+'%'}
+  if(gameMute)gameMute.checked=!!marinePrefs.gameMuted;
+  if(gameVolume){gameVolume.value=String(Number(marinePrefs.gameVolume??100));byId('marineGameVolumeValue').textContent=gameVolume.value+'%'}
+ }
+ if(brightnessSlider)brightnessSlider.addEventListener('input',()=>{A.bright=Number(brightnessSlider.value);if(typeof applyA11y==='function')applyA11y();byId('marineBrightnessValue').textContent=brightnessSlider.value+'%'});
+ if(nightSlider)nightSlider.addEventListener('input',()=>{A.night=Number(nightSlider.value);if(typeof applyA11y==='function')applyA11y();byId('marineNightValue').textContent=nightSlider.value+'%'});
+ if(gameMute)gameMute.addEventListener('change',()=>{setMarinePref('gameMuted',gameMute.checked);renderAudioRows()});
+ if(gameVolume)gameVolume.addEventListener('input',()=>{setMarinePref('gameVolume',Number(gameVolume.value));byId('marineGameVolumeValue').textContent=gameVolume.value+'%';applyAudioForKey('game:current')});
+ byId('marineSaveLayout').addEventListener('click',saveCurrentLayout);byId('marineRestoreLayout').addEventListener('click',restoreLayout);byId('marineDeleteLayout').addEventListener('click',deleteLayout);
+ byId('marineOpenThemeStudio').addEventListener('click',()=>{openWindow('settingsWindow','Settings');const b=all('#settingsWindow .settings-tab-btn').find(x=>x.dataset.target==='tab-personalization');if(b)b.click();byId('marineThemeStudio')?.scrollIntoView({behavior:'smooth',block:'center'})});
+ byId('marineOpenShortcuts').addEventListener('click',()=>{openWindow('settingsWindow','Settings');const b=all('#settingsWindow .settings-tab-btn').find(x=>x.dataset.target==='tab-systemprefs');if(b)b.click();byId('marineShortcutEditor')?.scrollIntoView({behavior:'smooth',block:'center'})});
+
+ /* Always-on-top controls on each app window. */
+ let pinnedWindows=safeStore('marinePinnedWindows',[]);if(!Array.isArray(pinnedWindows))pinnedWindows=[];
+ const savePinned=()=>saveStore('marinePinnedWindows',pinnedWindows);
+ function restackPinned(){
+  const visible=all('.os-window').filter(w=>!w.classList.contains('hidden')&&pinnedWindows.includes(w.id)).sort((a,b)=>(Number(a.style.zIndex)||0)-(Number(b.style.zIndex)||0));
+  visible.forEach(w=>{zTop++;w.style.zIndex=String(zTop)});
+ }
+ function setPinned(id,value){
+  pinnedWindows=pinnedWindows.filter(x=>x!==id);if(value)pinnedWindows.push(id);savePinned();refreshPinButtons();if(value)restackPinned();
+ }
+ function refreshPinButtons(){
+  all('.os-window .marine-pin-window').forEach(b=>{const id=b.dataset.windowId;const on=pinnedWindows.includes(id);b.classList.toggle('marine-tile-pinned',on);b.setAttribute('aria-pressed',String(on));b.title=on?'Unpin window from top':'Keep this window above others';if(!b.firstElementChild)b.innerHTML='<i class="fa-solid fa-thumbtack"></i>'});
+ }
+ function bindPinButtons(){
+  all('.os-window').forEach(w=>{
+   const close=w.querySelector('button[aria-label^="Close"],button[onclick*="closeWindow"]');const header=w.querySelector('.window-header');if(!header||header.querySelector('.marine-pin-window'))return;
+   const b=document.createElement('button');b.type='button';b.className='marine-pin-window';b.dataset.windowId=w.id;b.style.cssText='width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:#a8c4bd;cursor:pointer';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setPinned(w.id,!pinnedWindows.includes(w.id))});
+   if(close&&close.parentElement)close.parentElement.insertBefore(b,close);else header.append(b);
+  });
+  refreshPinButtons();
+ }
+ bindPinButtons();
+ const baseFocusPinned=focusWin;
+ focusWin=function(id){const result=baseFocusPinned(id);restackPinned();return result};
+ const baseOpenPinned=openWindow;
+ openWindow=function(id,title){const result=baseOpenPinned(id,title);bindPinButtons();restackPinned();return result};
+ const pinObserver=new MutationObserver(()=>{bindPinButtons();all('iframe').forEach(frame=>watchFrame(frame,permissionKeyForFrame(frame,false)))});pinObserver.observe(document.body,{childList:true,subtree:true});
+
+ /* Saved theme presets live alongside the existing appearance controls. */
+ const themeFields=['appearanceMode','themePreset','accentColor','accentStrength','wallpaperPreset','windowOpacity','windowRadius','glassBlur','windowShadow','dockPosition','dockOpacity','dockIconSize','dockLabels','fontFamily','density','wallpaperUrl'];
+ const themes=safeStore('marineThemeProfiles',[]);let themeProfiles=Array.isArray(themes)?themes:[];
+ const themeSection=document.createElement('section');themeSection.className='marine-settings-feature-block';themeSection.id='marineThemeStudio';themeSection.innerHTML='<h3>Theme Studio</h3><p>Save a complete look for Marine OS and switch back to it whenever you like.</p><div class="mf-row"><select id="marineThemeSelect" style="flex:1"></select><button id="marineThemeApply" class="mf-button mf-primary">Apply</button></div><div class="mf-row"><button id="marineThemeSave" class="mf-button">Save current theme</button><button id="marineThemeDelete" class="mf-button">Delete selected</button></div>';
+ const personal=byId('tab-personalization');if(personal)personal.append(themeSection);
+ function renderThemes(){
+  const select=byId('marineThemeSelect');if(!select)return;const chosen=select.value;select.replaceChildren();
+  if(!themeProfiles.length){const o=document.createElement('option');o.value='';o.textContent='No saved themes';select.append(o)}
+  themeProfiles.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;select.append(o)});
+  if(themeProfiles.some(t=>t.id===chosen))select.value=chosen;
+ }
+ byId('marineThemeSave').addEventListener('click',()=>{const name=prompt('Name this theme','Sea glass');if(!name||!name.trim())return;const values={};themeFields.forEach(k=>{if(k==='wallpaperUrl')values[k]=marinePrefs[k]||'';else if(Object.prototype.hasOwnProperty.call(marinePrefs,k))values[k]=marinePrefs[k]});const item={id:'theme-'+Date.now(),name:name.trim().slice(0,32),values:values};themeProfiles.unshift(item);themeProfiles=themeProfiles.slice(0,20);saveStore('marineThemeProfiles',themeProfiles);renderThemes();byId('marineThemeSelect').value=item.id;window.marineNotify('Theme saved',item.name,'fa-palette')});
+ byId('marineThemeApply').addEventListener('click',()=>{const t=themeProfiles.find(x=>x.id===byId('marineThemeSelect').value);if(!t)return;Object.assign(marinePrefs,t.values||{});saveStore('prefSettings',marinePrefs);if(t.values&&t.values.themePreset&&typeof applyTheme==='function')applyTheme(t.values.themePreset);if(t.values&&Object.prototype.hasOwnProperty.call(t.values,'wallpaperUrl')&&typeof setWallpaper==='function')setWallpaper(t.values.wallpaperUrl);if(typeof applyMarinePrefs==='function')applyMarinePrefs();window.marineNotify('Theme applied',t.name,'fa-palette')});
+ byId('marineThemeDelete').addEventListener('click',()=>{const id=byId('marineThemeSelect').value;if(!id)return;themeProfiles=themeProfiles.filter(t=>t.id!==id);saveStore('marineThemeProfiles',themeProfiles);renderThemes()});renderThemes();
+
+ /* Per-app embedded permissions. */
+ let permissionOverrides=safeStore('marinePerAppPermissions',{});if(!permissionOverrides||typeof permissionOverrides!=='object')permissionOverrides={};
+ const permissionChoices=['default','allow','block'];
+ function permissionKeyForFrame(frame,isGame){
+  if(frame&&frame.dataset.marinePermissionKey)return frame.dataset.marinePermissionKey;
+  if(isGame)return 'game:'+(byId('gameModalTitle')?.textContent||'current');
+  if(frame&&frame.closest('#uvFrames'))return 'app:browserWindow';
+  const owner=frame&&frame.closest('.os-window');if(owner&&owner.id==='genericAppWindow')return 'tool:'+(byId('genericAppTitle')?.textContent||'app');
+  if(owner)return 'app:'+owner.id;
+  return 'app:browserWindow';
+ }
+ function applyPermissionToFrame(frame,key){
+  if(!frame)return;key=key||permissionKeyForFrame(frame,false);
+  const record=permissionOverrides[key]||{},allow=[];
+  const choose=(field,def)=>record[field]==='allow'?true:record[field]==='block'?false:def;
+  if(choose('fullscreen',true))allow.push('fullscreen');
+  if(choose('autoplay',!!marinePrefs.allowAutoplay))allow.push('autoplay');
+  if(choose('clipboard',!!marinePrefs.allowClipboard))allow.push('clipboard-write');
+  frame.setAttribute('allow',allow.join('; '));
+  frame.referrerPolicy=choose('referrer',!!marinePrefs.noReferrer)?'no-referrer':'strict-origin-when-cross-origin';
+ }
+ const watchedFrames=new WeakSet();
+ function watchFrame(frame,key){
+  if(!frame)return;frame.dataset.marinePermissionKey=key||permissionKeyForFrame(frame,false);
+  const apply=()=>{const k=frame.dataset.marinePermissionKey;applyPermissionToFrame(frame,k);applyAudioToFrame(frame,k)};
+  if(!watchedFrames.has(frame)){watchedFrames.add(frame);frame.addEventListener('load',apply)}
+  apply();
+ }
+ function framesForPermission(key){
+  const frames=[];
+  if(key==='app:browserWindow'&&typeof tabs!=='undefined')tabs.forEach(t=>{if(t.f)frames.push(t.f)});
+  else if(key.startsWith('app:')){const id=key.slice(4),w=byId(id);if(w)frames.push(...w.querySelectorAll('iframe'))}
+  else if(key.startsWith('tool:')){if(byId('genericAppTitle')?.textContent===key.slice(5)){const f=byId('genericAppIframe');if(f)frames.push(f)}}
+  else if(key.startsWith('game:')){if((byId('gameModalTitle')?.textContent||'')===key.slice(5)&&gameFrame)frames.push(gameFrame)}
+  return frames;
+ }
+ function updatePermission(key,field,value){permissionOverrides[key]=Object.assign({},permissionOverrides[key]||{},{[field]:value});saveStore('marinePerAppPermissions',permissionOverrides);framesForPermission(key).forEach(f=>watchFrame(f,key))}
+ const permissionContainer=document.createElement('section');permissionContainer.className='marine-settings-feature-block';permissionContainer.id='marinePermissions';permissionContainer.innerHTML='<h3>App permissions</h3><p>Choose whether each embedded app may use fullscreen, autoplay, clipboard access and referrer details. “Default” follows the main Marine OS setting.</p><div id="marinePermissionList" style="max-height:440px;overflow:auto"></div>';
+ const privacy=byId('tab-privacy');if(privacy)privacy.append(permissionContainer);
+ function renderPermissions(){
+  const list=byId('marinePermissionList');if(!list)return;list.replaceChildren();
+  catalogItems().forEach(item=>{
+   const row=document.createElement('div');row.className='mf-row';row.style.alignItems='flex-start';
+   const title=document.createElement('div');title.textContent=item.name;title.style.cssText='min-width:82px;padding-top:6px;font-size:11px;color:#e5f2ee';
+   const controls=document.createElement('div');controls.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(92px,1fr));gap:5px';
+   [['fullscreen','Full screen'],['autoplay','Autoplay'],['clipboard','Clipboard'],['referrer','Hide referrer']].forEach(([field,label])=>{const wrap=document.createElement('label');wrap.style.cssText='display:flex;align-items:center;gap:3px;font-size:9px';const text=document.createElement('span');text.textContent=label;const select=document.createElement('select');select.className='mf-select';select.style.cssText='max-width:68px;padding:3px;font-size:9px';permissionChoices.forEach(value=>{const o=document.createElement('option');o.value=value;o.textContent=value[0].toUpperCase()+value.slice(1);select.append(o)});select.value=(permissionOverrides[item.key]||{})[field]||'default';select.addEventListener('change',()=>updatePermission(item.key,field,select.value));wrap.append(text,select);controls.append(wrap)});
+   row.append(title,controls);list.append(row);
+  });
+ }
+ const oldApplyFramePrefs=applyMarineFramePrefs;
+ applyMarineFramePrefs=function(frame,isGame){oldApplyFramePrefs(frame,isGame);if(frame){const key=permissionKeyForFrame(frame,isGame);watchFrame(frame,key)}};
+ const priorOpenGeneric=openGeneric;
+ openGeneric=function(name,icon,url,html){const frame=byId('genericAppIframe');if(frame)frame.dataset.marinePermissionKey='tool:'+name;const result=priorOpenGeneric(name,icon,url,html);if(frame)watchFrame(frame,'tool:'+name);return result};
+ const priorLaunchGame=launchGame;
+ launchGame=function(title,url,proxy){if(gameFrame)gameFrame.dataset.marinePermissionKey='game:'+title;const result=priorLaunchGame(title,url,proxy);if(gameFrame)watchFrame(gameFrame,'game:'+title);return result};
+ if(typeof newTab==='function'){
+  const priorNewTab=newTab;
+  newTab=function(url){const result=priorNewTab(url);const frame=result&&result.f;if(frame)watchFrame(frame,'app:browserWindow');return result};
+ }
+ all('iframe').forEach(frame=>watchFrame(frame,permissionKeyForFrame(frame,false)));
+ renderPermissions();
+
+ /* Per-app volume and mute controls for same-origin media in embedded pages. */
+ let appAudio=safeStore('marinePerAppAudio',{});if(!appAudio||typeof appAudio!=='object')appAudio={};
+ function framesForAudio(key){
+  if(key==='app:browserWindow')return typeof tabs!=='undefined'?tabs.map(t=>t.f).filter(Boolean):[];
+  if(key==='game:current')return gameFrame?[gameFrame]:[];
+  if(key.startsWith('game:'))return (byId('gameModalTitle')?.textContent||'')===key.slice(5)&&gameFrame?[gameFrame]:[];
+  if(key.startsWith('tool:'))return (byId('genericAppTitle')?.textContent||'')===key.slice(5)&&byId('genericAppIframe')?[byId('genericAppIframe')]:[];
+  if(key.startsWith('app:')){const w=byId(key.slice(4));return w?Array.from(w.querySelectorAll('iframe')):[]}
+  return [];
+ }
+ function applyAudioToFrame(frame,key){
+  if(!frame)return;const setting=appAudio[key];if(!setting)return;
+  try{const media=frame.contentDocument.querySelectorAll('audio,video');media.forEach(m=>{m.muted=!!setting.muted;m.volume=Math.max(0,Math.min(1,Number(setting.volume)/100));m.dataset.marineOsAudio='1'})}catch(e){}
+ }
+ function applyAudioForKey(key){framesForAudio(key).forEach(f=>{applyAudioToFrame(f,key);if(key==='game:current'&&typeof applyMarineFramePrefs==='function')applyMarineFramePrefs(f,true)})}
+ function renderAudioRows(){
+  const root=byId('marineAudioRows');if(!root)return;root.replaceChildren();
+  const keys=catalogItems().map(item=>({key:item.key,name:item.name}));
+  const currentGame=byId('gameModalTitle')?.textContent;if(currentGame&&!keys.some(item=>item.key==='game:'+currentGame))keys.push({key:'game:'+currentGame,name:'Game: '+currentGame});
+  const seen=new Set();
+  keys.filter(x=>!seen.has(x.key)&&seen.add(x.key)).forEach(item=>{
+   const row=document.createElement('div');row.className='mf-row';row.style.alignItems='flex-start';
+   const title=document.createElement('div');title.style.cssText='min-width:90px;font-size:11px;padding-top:5px';title.textContent=item.name;
+   const controls=document.createElement('div');controls.style.cssText='display:flex;align-items:center;gap:5px';
+   const state=appAudio[item.key]||{muted:false,volume:100};
+   const mute=document.createElement('input');mute.type='checkbox';mute.className='mf-check';mute.checked=!!state.muted;mute.title='Mute '+item.name;
+   const range=document.createElement('input');range.type='range';range.min='0';range.max='100';range.value=String(state.volume??100);range.className='mf-range';range.title=item.name+' volume';
+   const label=document.createElement('small');label.textContent=range.value+'%';label.style.minWidth='30px';
+   mute.addEventListener('change',()=>{appAudio[item.key]=Object.assign({},appAudio[item.key]||{volume:Number(range.value)},{muted:mute.checked});saveStore('marinePerAppAudio',appAudio);applyAudioForKey(item.key)});
+   range.addEventListener('input',()=>{label.textContent=range.value+'%';appAudio[item.key]=Object.assign({},appAudio[item.key]||{muted:mute.checked},{volume:Number(range.value)});saveStore('marinePerAppAudio',appAudio);applyAudioForKey(item.key)});
+   controls.append(mute,range,label);row.append(title,controls);root.append(row);
+  });
+  const note=document.createElement('div');note.className='mf-sub';note.textContent='Cross-site players may prevent per-app volume changes. The controls are saved and will apply automatically where browser security permits.';root.append(note);
+ }
+ const baseApplyFrameForAudio=applyMarineFramePrefs;
+ applyMarineFramePrefs=function(frame,isGame){baseApplyFrameForAudio(frame,isGame);if(frame)applyAudioToFrame(frame,permissionKeyForFrame(frame,isGame))};
+ syncQuickValues();renderAudioRows();
+
+ /* Shortcut editor with editable combinations. */
+ const defaultShortcuts={start:'Ctrl+Space',quick:'Ctrl+Shift+Space',settings:'Ctrl+,',close:'Alt+F4',nextDesk:'Ctrl+Alt+ArrowRight',previousDesk:'Ctrl+Alt+ArrowLeft',switcher:'Ctrl+Alt+Tab',saveLayout:'Ctrl+Alt+S'};
+ let shortcuts=safeStore('marineKeyboardShortcuts',{});if(!shortcuts||typeof shortcuts!=='object')shortcuts={};
+ const shortcutNames={start:'Open Start',quick:'Quick settings',settings:'Open Settings',close:'Close active window',nextDesk:'Next workspace',previousDesk:'Previous workspace',switcher:'Window switcher',saveLayout:'Save current layout'};
+ let captureShortcut='';
+ const shortcutSection=document.createElement('section');shortcutSection.className='marine-settings-feature-block';shortcutSection.id='marineShortcutEditor';shortcutSection.innerHTML='<h3>Keyboard shortcuts</h3><p>Select “Change” and press the keys you want to use. Shortcuts are saved on this device.</p><div id="marineShortcutList"></div><button id="marineResetShortcuts" class="mf-button" type="button">Restore defaults</button>';
+ const systemPrefs=byId('tab-systemprefs');if(systemPrefs)systemPrefs.append(shortcutSection);
+ const shortcutValue=id=>shortcuts[id]||defaultShortcuts[id];
+ function renderShortcuts(){
+  const list=byId('marineShortcutList');if(!list)return;list.replaceChildren();
+  Object.keys(defaultShortcuts).forEach(id=>{const row=document.createElement('div');row.className='mf-shortcut';const label=document.createElement('span');label.textContent=shortcutNames[id];const combo=document.createElement('code');combo.textContent=shortcutValue(id);const change=button(captureShortcut===id?'Press keys…':'Change',()=>{captureShortcut=id;renderShortcuts();window.marineNotify('Shortcut ready','Press your new key combination, or Escape to cancel.','fa-keyboard')});row.append(label,combo,change);list.append(row)});
+ }
+ byId('marineResetShortcuts').addEventListener('click',()=>{shortcuts={};saveStore('marineKeyboardShortcuts',shortcuts);renderShortcuts()});renderShortcuts();
+ function eventCombo(e){
+  const k=e.key;if(['Control','Alt','Shift','Meta'].includes(k))return '';
+  const key=e.code==='Space'?'Space':(k.length===1?k.toUpperCase():k);
+  const parts=[];if(e.ctrlKey)parts.push('Ctrl');if(e.altKey)parts.push('Alt');if(e.shiftKey)parts.push('Shift');if(e.metaKey)parts.push('Meta');parts.push(key);return parts.join('+');
+ }
+ function closeCurrentWindow(){
+  const visible=all('.os-window').filter(w=>!w.classList.contains('hidden'));
+  const target=(active&&byId(active)&&!byId(active).classList.contains('hidden'))?byId(active):visible.sort((a,b)=>(Number(b.style.zIndex)||0)-(Number(a.style.zIndex)||0))[0];
+  if(target)closeAppWindowFromX(target.id);
+ }
+ function runShortcut(id){
+  if(id==='start')toggleStartMenu();
+  else if(id==='quick')togglePanel(quickPanel);
+  else if(id==='settings')openWindow('settingsWindow','Settings');
+  else if(id==='close')closeCurrentWindow();
+  else if(id==='nextDesk'||id==='previousDesk'){const i=desks.findIndex(d=>d.id===activeDesk),step=id==='nextDesk'?1:-1;switchDesk(desks[(i+step+desks.length)%desks.length].id)}
+  else if(id==='switcher'&&typeof window.showMarineSwitcher==='function')window.showMarineSwitcher();
+  else if(id==='saveLayout')saveCurrentLayout();
+ }
+ document.addEventListener('keydown',e=>{
+  if(captureShortcut){
+   if(e.key==='Escape'){captureShortcut='';renderShortcuts();e.preventDefault();e.stopImmediatePropagation();return}
+   const combo=eventCombo(e);if(combo){shortcuts[captureShortcut]=combo;saveStore('marineKeyboardShortcuts',shortcuts);captureShortcut='';renderShortcuts();e.preventDefault();e.stopImmediatePropagation();return}
+  }
+  const combo=eventCombo(e);if(!combo)return;
+  const typing=e.target&&(e.target.closest&&e.target.closest('input,textarea,select,[contenteditable="true"]'));
+  for(const id of Object.keys(defaultShortcuts)){if(combo!==shortcutValue(id))continue;if(typing&&id!=='close')return;runShortcut(id);e.preventDefault();e.stopImmediatePropagation();return}
+ },true);
+
+ /* Keep the top controls and page sections in sync as windows change. */
+ const baseOpenAudio=openWindow;
+ openWindow=function(id,title){const result=baseOpenAudio(id,title);setTimeout(()=>{bindWindowCloseButtons();bindPinButtons();renderAudioRows();renderPermissions()},0);return result};
+ const baseCloseAudio=closeWindow;
+ closeWindow=function(id){const result=baseCloseAudio(id);setTimeout(()=>{bindWindowCloseButtons();renderAudioRows();renderPermissions()},0);return result};
+ if(typeof applyMarinePrefs==='function')applyMarinePrefs();
+ currentDesk().windows.forEach(id=>{const w=byId(id);if(w)w.classList.remove('hidden')});syncQuickValues();renderWorkspaces();renderLayouts();renderNotices();renderPermissions();bindWindowCloseButtons();bindPinButtons();const restoredTop=currentDesk().windows.map(id=>byId(id)).filter(w=>w&&!w.classList.contains('hidden')).sort((a,b)=>(Number(b.style.zIndex)||0)-(Number(a.style.zIndex)||0))[0];if(restoredTop)focusWin(restoredTop.id);
+})();
+</script>
 </body>
 </html>
