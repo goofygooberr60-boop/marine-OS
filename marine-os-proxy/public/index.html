@@ -3495,5 +3495,187 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
  currentDesk().windows.forEach(id=>{const w=byId(id);if(w)w.classList.remove('hidden')});syncQuickValues();renderWorkspaces();renderLayouts();renderNotices();renderPermissions();bindWindowCloseButtons();bindPinButtons();const restoredTop=currentDesk().windows.map(id=>byId(id)).filter(w=>w&&!w.classList.contains('hidden')).sort((a,b)=>(Number(b.style.zIndex)||0)-(Number(a.style.zIndex)||0))[0];if(restoredTop)focusWin(restoredTop.id);
 })();
 </script>
+<style id="marine-os-global-upgrades-style">
+#marineCommandShade{position:fixed;inset:0;z-index:100400;background:rgba(0,8,11,.66);backdrop-filter:blur(6px);display:flex;justify-content:center;align-items:flex-start;padding:12vh 14px 20px}
+#marineCommandShade[hidden],#marineWelcomeShade[hidden]{display:none!important}
+#marineCommandBox{width:min(680px,100%);max-height:76vh;overflow:hidden;border:1px solid rgba(112,205,186,.25);border-radius:18px;background:rgba(8,23,28,.98);box-shadow:0 28px 90px rgba(0,0,0,.65);color:#edf7f4}
+#marineCommandSearch{display:block;width:100%;box-sizing:border-box;padding:17px 19px;border:0;border-bottom:1px solid rgba(255,255,255,.08);outline:none;background:transparent;color:#f0faf7;font:16px Inter,system-ui}
+#marineCommandSearch::placeholder{color:#829c95}
+#marineCommandResults{max-height:58vh;overflow:auto;padding:8px}
+.marine-command-result{display:flex;width:100%;align-items:center;gap:12px;text-align:left;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:#e7f4f0;cursor:pointer}
+.marine-command-result:hover,.marine-command-result[aria-selected=true]{background:rgba(76,169,153,.18)}
+.marine-command-result i{width:21px;text-align:center;color:#76cbb8}
+.marine-command-result small{display:block;color:#91aaa3;font-size:10px;margin-top:2px}
+.marine-command-empty{padding:20px;text-align:center;color:#8fa8a1}
+#marineWelcomeShade{position:fixed;inset:0;z-index:100500;display:grid;place-items:center;padding:18px;background:rgba(0,8,11,.75);backdrop-filter:blur(9px)}
+#marineWelcomeCard{width:min(650px,100%);max-height:88vh;overflow:auto;border:1px solid rgba(116,207,188,.22);border-radius:22px;padding:24px;background:radial-gradient(ellipse at top right,rgba(44,132,124,.22),transparent 50%),rgba(8,22,27,.98);box-shadow:0 28px 90px rgba(0,0,0,.65);color:#eaf6f2}
+#marineWelcomeCard h2{margin:0 0 7px;font-size:25px;color:#f2fbf8}
+.marine-welcome-card{border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.035);padding:13px}
+#marineHealthPanel{z-index:100100}
+@media(max-width:600px){#marineWelcomeCard{padding:17px}#marineWelcomeCard h2{font-size:21px}.marine-command-result{padding:11px}}
+</style>
+<script id="marine-os-global-upgrades">
+(function(){
+ 'use strict';
+ const byId=id=>document.getElementById(id),all=(s,r=document)=>Array.from(r.querySelectorAll(s));
+ const panelBtn=(label,fn,primary)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='border:1px solid rgba(117,203,186,.2);border-radius:9px;padding:8px 11px;color:#eaf7f3;background:'+(primary?'#155f58':'rgba(255,255,255,.06)')+';cursor:pointer;font:12px Inter,system-ui';b.addEventListener('click',fn);return b};
+ const topControls=byId('osClock')&&byId('osClock').parentElement;
+ function addControl(id,icon,label,handler){
+  if(byId(id)||!topControls)return null;const b=document.createElement('button');b.id=id;b.type='button';b.title=label;b.setAttribute('aria-label',label);b.innerHTML='<i class="fa-solid '+icon+'"></i>';b.style.cssText='height:23px;min-width:27px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:#dcece8;cursor:pointer;font-size:11px';b.addEventListener('click',handler);topControls.insertBefore(b,byId('marineWorkspaceButton')||byId('osClock'));return b;
+ }
+
+ /* One search surface for apps, settings, and common system actions. */
+ const shade=document.createElement('div');shade.id='marineCommandShade';shade.hidden=true;
+ const box=document.createElement('div');box.id='marineCommandBox';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label','Search Marine OS');
+ const search=document.createElement('input');search.id='marineCommandSearch';search.type='search';search.placeholder='Search apps, settings, and actions';search.autocomplete='off';search.setAttribute('aria-label','Search Marine OS');
+ const results=document.createElement('div');results.id='marineCommandResults';results.setAttribute('role','listbox');
+ box.append(search,results);shade.append(box);document.body.append(shade);
+ let commandItems=[],selected=0;
+ function settingsCategory(def){
+  const map={personalization:'personalization',system:'systemprefs',apps:'apps',time:'time',gaming:'gaming',privacy:'privacy',accessibility:'accessibility',display:'display',browser:'browser'};
+  return def.category?('tab-'+(map[def.category]||def.category)):null;
+ }
+ function openSetting(def){
+  openWindow('settingsWindow','Settings');
+  const target=def.target||settingsCategory(def);
+  const nav=all('#settingsWindow .settings-tab-btn').find(b=>b.dataset.target===target);if(nav)nav.click();
+  if(def.id)setTimeout(()=>{const control=byId('marine-pref-'+def.id),row=control&&control.closest('.settings-pref-row');if(row)row.scrollIntoView({block:'center',behavior:'smooth'});if(control&&control.focus)control.focus({preventScroll:true})},80);
+ }
+ function openSystemTab(){
+  openWindow('settingsWindow','Settings');const nav=all('#settingsWindow .settings-tab-btn').find(b=>b.dataset.target==='tab-system');if(nav)nav.click();
+ }
+ function commonActions(){
+  return [
+   {label:'Open Start menu',detail:'Show all apps and recent items',icon:'fa-house',run:()=>toggleStartMenu(),terms:'start launcher'},
+   {label:'Open Settings',detail:'Change how Marine OS looks and behaves',icon:'fa-solid fa-gear',run:()=>openWindow('settingsWindow','Settings'),terms:'preferences setup'} ,
+   {label:'Close active window',detail:'Close the app in front',icon:'fa-solid fa-xmark',run:()=>{if(typeof closeActive==='function')closeActive()},terms:'exit close app'},
+   {label:'Quick settings',detail:'Display, game audio and saved layouts',icon:'fa-sliders',run:()=>byId('marineQuickButton')?.click(),terms:'quick controls brightness'},
+   {label:'Workspaces',detail:'Switch desks or move an open app',icon:'fa-layer-group',run:()=>byId('marineWorkspaceButton')?.click(),terms:'desktop desks'},
+   {label:'System status',detail:'Connection, storage and running apps',icon:'fa-heart-pulse',run:()=>showHealth(),terms:'health diagnostics status system'},
+   {label:'Open Browser',detail:'Browse in a Marine OS window',icon:'fa-compass',run:()=>openWindow('browserWindow','Browser'),terms:'web internet'},
+   {label:'Open App Store',detail:'Find apps and games',icon:'fa-store',run:()=>openWindow('storeWindow','App Store'),terms:'library apps games'},
+   {label:'Back up Marine OS',detail:'Export settings, bookmarks and saved data',icon:'fa-box-archive',run:()=>{openSystemTab();byId('sysExport')?.click()},terms:'backup export save data'},
+   {label:'Restore from backup',detail:'Import a saved Marine OS backup',icon:'fa-box-open',run:()=>{openSystemTab();byId('sysImport')?.click()},terms:'restore import backup'},
+   {label:'Save current layout',detail:'Name and save the open windows',icon:'fa-table-columns',run:()=>{byId('marineQuickButton')?.click();byId('marineSaveLayout')?.click()},terms:'workspace layout save'},
+   {label:'Show welcome guide',detail:'A quick introduction to Marine OS',icon:'fa-compass',run:()=>showWelcome(),terms:'help tour getting started'},
+   {label:'Reload Marine OS',detail:'Refresh the desktop',icon:'fa-rotate-right',run:()=>{if(confirm('Reload Marine OS now?'))location.reload()},terms:'restart refresh'}
+  ];
+ }
+ function makeCommandItems(){
+  const items=[];
+  try{allItems().forEach(item=>items.push({label:item.name,detail:'App',icon:item.icon||'fa-solid fa-cube',terms:item.name,run:item.run}))}catch(e){}
+  try{if(typeof bBook!=='undefined')bBook.slice(0,80).forEach(book=>items.push({label:book.t||book.u,detail:'Bookmark',icon:'fa-solid fa-bookmark',terms:(book.t||'')+' '+(book.u||''),run:()=>{openWindow('browserWindow','Browser');setTimeout(()=>uvGo(book.u),70)}}))}catch(e){}
+  try{if(typeof bHist!=='undefined')bHist.slice(0,8).forEach(page=>items.push({label:page.t||page.u,detail:'Recent page',icon:'fa-solid fa-clock-rotate-left',terms:(page.t||'')+' '+(page.u||''),run:()=>{openWindow('browserWindow','Browser');setTimeout(()=>uvGo(page.u),70)}}))}catch(e){}
+  try{marinePrefDefs.forEach(def=>items.push({label:def.label,detail:(def.group||def.category||'Settings')+' setting',icon:'fa-solid fa-sliders',terms:[def.label,def.description,def.group,def.category].join(' '),run:()=>openSetting(def)}))}catch(e){}
+  commonActions().forEach(item=>items.push(item));
+  return items;
+ }
+ function scoreItem(item,q){
+  const text=(item.label+' '+(item.terms||'')+' '+(item.detail||'')).toLowerCase();
+  if(!q)return item.detail==='App'?1:0.8;
+  if(item.label.toLowerCase()===q)return 10;
+  if(item.label.toLowerCase().startsWith(q))return 8;
+  if(item.label.toLowerCase().includes(q))return 6;
+  return text.includes(q)?3:0;
+ }
+ function renderCommands(){
+  const q=search.value.trim().toLowerCase();commandItems=makeCommandItems().map(item=>({item,score:scoreItem(item,q)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.item.label.localeCompare(b.item.label)).slice(0,14).map(x=>x.item);
+  results.replaceChildren();selected=0;
+  if(!commandItems.length){const empty=document.createElement('div');empty.className='marine-command-empty';empty.textContent='No matching apps, settings, or actions.';results.append(empty);return}
+  commandItems.forEach((item,index)=>{const row=document.createElement('button');row.type='button';row.className='marine-command-result';row.setAttribute('role','option');row.setAttribute('aria-selected',String(index===selected));const icon=document.createElement('i');icon.className=item.icon.includes('fa-')?item.icon:'fa-solid '+item.icon;const copy=document.createElement('span');copy.style.flex='1';copy.textContent=item.label;const small=document.createElement('small');small.textContent=item.detail||'';copy.append(small);row.append(icon,copy);row.addEventListener('mouseenter',()=>{selected=index;updateSelection()});row.addEventListener('click',()=>runCommand(index));results.append(row)});
+ }
+ function updateSelection(){all('.marine-command-result',results).forEach((el,i)=>el.setAttribute('aria-selected',String(i===selected)))}
+ function runCommand(index){const item=commandItems[index];if(!item)return;shade.hidden=true;search.value='';if(typeof item.run==='function')item.run()}
+ function showCommand(){
+  shade.hidden=false;search.value='';renderCommands();requestAnimationFrame(()=>search.focus());
+ }
+ function hideCommand(){shade.hidden=true}
+ shade.addEventListener('click',e=>{if(e.target===shade)hideCommand()});
+ search.addEventListener('input',renderCommands);
+ document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();e.stopImmediatePropagation();if(shade.hidden)showCommand();else hideCommand();return}
+  if(shade.hidden)return;
+  if(e.key==='Escape'){e.preventDefault();hideCommand();return}
+  if(e.key==='ArrowDown'){e.preventDefault();selected=(selected+1)%commandItems.length;updateSelection();return}
+  if(e.key==='ArrowUp'){e.preventDefault();selected=(selected+commandItems.length-1)%commandItems.length;updateSelection();return}
+  if(e.key==='Enter'){e.preventDefault();runCommand(selected)}
+ },true);
+ addControl('marineCommandButton','fa-magnifying-glass','Search Marine OS (Ctrl+K)',showCommand);
+
+ /* A light first-run guide with a permanent way to reopen it from System settings. */
+ const welcomeShade=document.createElement('div');welcomeShade.id='marineWelcomeShade';welcomeShade.hidden=true;
+ welcomeShade.innerHTML='<section id="marineWelcomeCard" role="dialog" aria-modal="true" aria-labelledby="marineWelcomeTitle"><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span style="display:grid;place-items:center;width:45px;height:45px;border-radius:14px;background:linear-gradient(145deg,#62c7b1,#176a66);font-size:22px">⚓</span><div><h2 id="marineWelcomeTitle">Welcome to Marine OS</h2><div style="color:#97afa8;font-size:12px">Your desktop, tuned to the way you use it.</div></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:9px;margin:17px 0"><article class="marine-welcome-card"><strong>Make it yours</strong><p style="color:#a6bbb5;font-size:11px">Choose a look, wallpaper, and desktop layout.</p><button type="button" data-welcome-action="appearance">Personalize</button></article><article class="marine-welcome-card"><strong>Find your apps</strong><p style="color:#a6bbb5;font-size:11px">Search apps, settings, and actions from one place.</p><button type="button" data-welcome-action="search">Open search</button></article><article class="marine-welcome-card"><strong>Keep your setup</strong><p style="color:#a6bbb5;font-size:11px">Save layouts and export a backup from System settings.</p><button type="button" data-welcome-action="backup">Open backup tools</button></article></div><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="color:#718a83;font-size:10px">You can reopen this guide from System &amp; About.</span><div style="display:flex;gap:7px"><button type="button" data-welcome-close>Skip for now</button><button type="button" class="mf-primary" data-welcome-close>Get started</button></div></div></section>';
+ document.body.append(welcomeShade);
+ welcomeShade.querySelectorAll('button').forEach(b=>{b.style.cssText='border:1px solid rgba(117,203,186,.2);border-radius:8px;padding:7px 9px;color:#eaf7f3;background:rgba(255,255,255,.06);cursor:pointer;font:11px Inter,system-ui';if(b.classList.contains('mf-primary'))b.style.background='#155f58'});
+ function showWelcome(){welcomeShade.hidden=false;welcomeShade.querySelector('[data-welcome-close]')?.focus()}
+ function closeWelcome(){welcomeShade.hidden=true;try{store.set('marineWelcomeDone',true)}catch(e){}}
+ welcomeShade.addEventListener('click',e=>{
+  const action=e.target.closest&&e.target.closest('[data-welcome-action]');
+  if(action){const kind=action.dataset.welcomeAction;closeWelcome();if(kind==='appearance'){openWindow('settingsWindow','Settings');all('#settingsWindow .settings-tab-btn').find(b=>b.dataset.target==='tab-personalization')?.click()}else if(kind==='search')showCommand();else if(kind==='backup'){openSystemTab();setTimeout(()=>byId('sysExport')?.focus(),80)}return}
+  if(e.target.closest&&e.target.closest('[data-welcome-close]'))closeWelcome();
+ });
+ const about=byId('tab-system');
+ if(about&&!byId('marineWelcomeAgain')){const card=document.createElement('section');card.className='marine-settings-feature-block';card.innerHTML='<h3>Getting started</h3><p>Open the Marine OS guide for a quick tour of search, themes, workspaces and backups.</p><button id="marineWelcomeAgain" type="button">Show welcome guide</button>';about.append(card);byId('marineWelcomeAgain').addEventListener('click',showWelcome)}
+ addEventListener('keydown',e=>{if(e.key==='Escape'&&!welcomeShade.hidden)closeWelcome()});
+ if(!store.get('marineWelcomeDone',false))setTimeout(showWelcome,900);
+
+ /* System health summarizes the browser state without exposing page contents. */
+ const health=document.createElement('section');health.id='marineHealthPanel';health.className='marine-feature-panel';health.hidden=true;
+ health.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><h3 style="margin:0;color:#effaf6">System status</h3><div style="font-size:11px;color:#93aaa4;margin-top:4px">A quick look at this browser session.</div></div><button id="marineHealthClose" type="button" class="mf-button">✕</button></div><div id="marineHealthRows" style="margin-top:12px"></div><div style="display:flex;gap:7px;margin-top:12px"><button id="marineHealthRefresh" type="button" class="mf-button">Refresh</button><button id="marineHealthBackup" type="button" class="mf-button mf-primary">Back up data</button><button id="marineHealthRestore" type="button" class="mf-button">Restore</button></div>';
+ document.body.append(health);
+ const quick=byId('marineQuickPanel');
+ if(quick){const section=document.createElement('div');section.className='mf-feature-heading';section.textContent='Marine OS';quick.append(section);const row=document.createElement('div');row.className='mf-grid';const open=panelBtn('System status',showHealth,false);row.append(open);quick.append(row)}
+ function statusRow(label,value,good){
+  const row=document.createElement('div');row.className='mf-row';const left=document.createElement('span');left.textContent=label;const right=document.createElement('strong');right.textContent=value;right.style.color=good?'#7ed2bd':'#f4b27c';row.append(left,right);return row
+ }
+ async function renderHealth(){
+  const rows=byId('marineHealthRows');if(!rows)return;rows.replaceChildren();
+  const online=navigator.onLine;rows.append(statusRow('Internet connection',online?'Online':'Offline',online));
+  const open=all('.os-window').filter(w=>!w.classList.contains('hidden')).length;rows.append(statusRow('Open app windows',String(open),true));
+  let estimate=null;try{if(navigator.storage&&navigator.storage.estimate)estimate=await navigator.storage.estimate()}catch(e){}
+  if(estimate){const used=Math.round((estimate.usage||0)/1024/1024*10)/10,quota=Math.round((estimate.quota||0)/1024/1024);rows.append(statusRow('Browser storage',used+' MB of '+quota+' MB',used<quota*.9))}
+  let workers='Not available';
+  if('serviceWorker'in navigator){try{const regs=await navigator.serviceWorker.getRegistrations();workers=regs.length?regs.length+' registered':'No service worker'}catch(e){workers='Could not read status'}}
+  rows.append(statusRow('Service workers',workers,workers!=='Not available'&&workers!=='Could not read status'));
+  const saved=typeof store!=='undefined'?store.get('marineWorkspaceLayouts',[]):[];rows.append(statusRow('Saved layouts',String(Array.isArray(saved)?saved.length:0),true));
+ }
+ function showHealth(){health.hidden=false;renderHealth()}
+ byId('marineHealthClose').addEventListener('click',()=>health.hidden=true);byId('marineHealthRefresh').addEventListener('click',renderHealth);
+ byId('marineHealthBackup').addEventListener('click',()=>{openSystemTab();byId('sysExport')?.click()});
+ byId('marineHealthRestore').addEventListener('click',()=>{openSystemTab();byId('sysImport')?.click()});
+ addEventListener('online',()=>{const i=byId('wifiIcon');if(i){i.title='Online';i.style.color='#dcece8'}if(!health.hidden)renderHealth()});
+ addEventListener('offline',()=>{const i=byId('wifiIcon');if(i){i.title='Offline';i.style.color='#f2a17f'}if(!health.hidden)renderHealth()});
+ if(!navigator.onLine){const i=byId('wifiIcon');if(i){i.title='Offline';i.style.color='#f2a17f'}}
+
+ /* Slow embedded games get a clear wait state and retry/close actions. */
+ const game=byId('gameModalIframe'),loader=byId('iframeLoader'),dialog=byId('gameModal');
+ let attempt=0,loadTimer=0;
+ if(loader&&game){
+  loader.style.zIndex='40';loader.style.pointerEvents='auto';
+  const msg=loader.querySelector('p');const actions=document.createElement('div');actions.id='marineGameRecoveryActions';actions.style.cssText='display:none;gap:8px;margin-top:15px';
+  const retry=panelBtn('Retry',()=>{const current=window.__marineCurrentGameLaunch;if(current)launchGame(current.title,current.url,current.proxy)},true);
+  const close=panelBtn('Close player',()=>byId('closeModalBtn')?.click(),false);actions.append(retry,close);loader.append(actions);
+  const priorLaunchGame=launchGame;
+  launchGame=function(title,url,proxy){
+   const token=++attempt;window.__marineCurrentGameLaunch={title:title,url:url,proxy:proxy};actions.style.display='none';loader.style.display='flex';if(msg)msg.textContent='Loading '+title+'…';
+   clearTimeout(loadTimer);const result=priorLaunchGame(title,url,proxy);
+   game.onload=()=>{
+    if(token!==attempt)return;
+    const src=game.getAttribute('src')||'';if(!src||src==='about:blank')return;
+    clearTimeout(loadTimer);actions.style.display='none';loader.style.display='none';
+   };
+   loadTimer=setTimeout(()=>{
+    if(token!==attempt||loader.style.display==='none')return;
+    const icon=loader.querySelector('i');if(icon)icon.className='fa-solid fa-triangle-exclamation text-4xl mb-3 text-amber-400';
+    if(msg)msg.textContent='This app is taking longer than expected. It may not allow embedding, or the connection may be slow.';
+    actions.style.display='flex';
+   },35000);
+   return result;
+  };
+  if(dialog)dialog.addEventListener('close',()=>{attempt++;clearTimeout(loadTimer);actions.style.display='none'});
+ }
+ if(typeof applyMarinePrefs==='function')applyMarinePrefs();
+})();
+</script>
 </body>
 </html>
