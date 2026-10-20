@@ -22,6 +22,25 @@ The proxy needs a host that runs Node and allows WebSockets. A static host
   A `Dockerfile` is included too. The host provides PORT automatically.
 Use the https address it gives you. Service workers need HTTPS (localhost is exempt).
 
+## Netlify (static edition)
+The repository includes a Netlify build configuration at its root. Import the GitHub
+repository in Netlify and keep the repository root as the base directory; Netlify will
+read `netlify.toml` and build the static edition automatically. The build command is
+`node marine-os-proxy/scripts/build-netlify.js` and the publish directory is
+`marine-os-proxy/dist`.
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/goofygooberr60-boop/marine-OS)
+
+This edition serves the Marine OS interface and local tools. The built-in Browser and
+proxy-powered launchers are disabled because Netlify publishes static files and does
+not run this project's always-on Wisp server. Use the Render deployment above for the
+full server edition. Game Center has separate GN Math and Seraph collections, with search,
+sorting, covers, and direct game links. GN Math's catalog comes from its public assets
+repository; Seraph's catalog metadata is included in `public/seraph-games.json`. A game
+may refuse to load inside the player, in which case its direct source link remains available.
+The Netlify build intentionally excludes the nested copy of this repository and proxy
+service-worker files.
+
 ## Engines and speed
 Settings > Browser > **Proxy engine**:
 - **Auto (default):** tries **Scramjet** (newer, faster); if it is missing, or a page has not
@@ -62,6 +81,7 @@ What makes things slow, and what is already done about it:
 
 ## Files
 - `public/index.html`  Marine OS
+- `public/marine-games.js`, `public/seraph-games.json`  Game Center interface and catalog index
 - `public/sw.js`, `public/uv/uv.config.js`  Ultraviolet service worker + settings
 - `public/sjsw.js`  Scramjet service worker
 - `src/index.js`  serves everything and the /wisp/ tunnel the proxies use
