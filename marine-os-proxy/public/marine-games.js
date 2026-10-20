@@ -7,12 +7,14 @@
   const GN_MATH_SOURCE = 'https://github.com/gn-math';
   const GN_MATH_SITE = 'https://gn-math.github.io/';
   const GN_MATH_ZONES = [
-    'https://cdn.jsdelivr.net/gh/gn-math/assets@main/zones.json',
-    'https://raw.githubusercontent.com/gn-math/assets/refs/heads/main/zones.json'
+    'https://raw.githubusercontent.com/gn-math/assets/main/zones.json',
+    'https://cdn.jsdelivr.net/gh/gn-math/assets@main/zones.json'
   ];
-  const GN_MATH_COVERS = 'https://cdn.jsdelivr.net/gh/gn-math/covers@main';
+  const GN_MATH_COVERS = 'https://raw.githubusercontent.com/gn-math/covers/main';
+  const GN_MATH_COVERS_FALLBACK = 'https://cdn.jsdelivr.net/gh/gn-math/covers@main';
   const GN_MATH_HTML = 'https://cdn.jsdelivr.net/gh/gn-math/html@main';
-  const SERAPH_IMAGE_PREFIX = 'https://cdn.jsdelivr.net/gh/a456pur/seraph@main/images/thumbnails/';
+  const SERAPH_IMAGE_PREFIX = 'https://raw.githubusercontent.com/a456pur/seraph/main/images/thumbnails/';
+  const SERAPH_IMAGE_FALLBACK_PREFIX = 'https://seraph.reveriestudios.online/images/thumbnails/';
   const safeText = (value) => String(value || '').trim();
   const state = {
     section: 'gn-math', query: '', sort: 'featured', genre: 'all',
@@ -21,42 +23,53 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    #marineGameCenterRoot{color:#e7f1ec;font-family:Inter,system-ui,sans-serif}
-    .mgc-shell{height:100%;display:flex;flex-direction:column;min-height:0;background:radial-gradient(ellipse at 50% -35%,rgba(44,125,98,.22),transparent 60%),#071410}
-    .mgc-top{padding:17px 20px 13px;border-bottom:1px solid rgba(170,220,199,.09);background:rgba(8,24,18,.64)}
+    #marineGameCenterRoot{color:#e8f0ed;font-family:Inter,system-ui,sans-serif;--mgc-accent:var(--pref-accent,#76b9a9);--mgc-radius:var(--pref-window-radius,14px)}
+    .mgc-shell{height:100%;display:flex;flex-direction:column;min-height:0;background:radial-gradient(ellipse at 50% -35%,color-mix(in srgb,var(--mgc-accent) 18%,transparent),transparent 60%),#07161d}
+    .mgc-top{padding:17px 20px 13px;border-bottom:1px solid rgba(174,210,203,.11);background:rgba(10,29,37,.72)}
     .mgc-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
     .mgc-heading h2{font-size:21px;line-height:1.2;margin:0;font-weight:700;color:#f1f8f4;letter-spacing:-.02em}
     .mgc-heading p{font-size:12px;color:#96afa2;margin:5px 0 0}
-    .mgc-source{font-size:11px;color:#85c9a8;white-space:nowrap;text-decoration:none}
-    .mgc-source:hover{color:#c2f0d2;text-decoration:underline}
+    .mgc-source{font-size:11px;color:var(--mgc-accent);white-space:nowrap;text-decoration:none}
+    .mgc-source:hover{color:color-mix(in srgb,var(--mgc-accent) 70%,white);text-decoration:underline}
     .mgc-controls{display:grid;grid-template-columns:auto minmax(130px,1fr) 130px 145px;gap:8px;align-items:center}
     .mgc-tabs{display:flex;gap:6px}
-    .mgc-tab,.mgc-select,.mgc-search{height:38px;border:1px solid rgba(174,213,195,.13);background:#0a1b14;color:#d5e8dc;border-radius:11px}
+    .mgc-tab,.mgc-select,.mgc-search{height:38px;border:1px solid rgba(174,210,203,.16);background:#0b2028;color:#dce9e6;border-radius:var(--mgc-radius)}
     .mgc-tab{padding:0 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:650;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
-    .mgc-tab:hover,.mgc-tab.active{background:#205b43;border-color:#59a77e;color:#fff}
+    .mgc-tab:hover,.mgc-tab.active{background:color-mix(in srgb,var(--mgc-accent) 26%,#0b2028);border-color:var(--mgc-accent);color:#fff}
     .mgc-search{display:flex;align-items:center;gap:9px;padding:0 12px;min-width:0}
-    .mgc-search i{color:#6fc19a;font-size:13px}
+    .mgc-search i{color:var(--mgc-accent);font-size:13px}
     .mgc-search input{width:100%;min-width:0;background:transparent;border:0;outline:0;color:#f3fbf6;font-size:12px}
-    .mgc-search input::placeholder{color:#719083}
+    .mgc-search input::placeholder{color:#8aa49f}
     .mgc-select{padding:0 10px;font-size:12px;outline:none;cursor:pointer}
-    .mgc-summary{font-size:11px;color:#83b59a;margin:11px 0 0;min-height:14px}
+    .mgc-summary{font-size:11px;color:var(--mgc-accent);margin:11px 0 0;min-height:14px}
     .mgc-grid{flex:1;min-height:0;overflow:auto;padding:16px 20px 24px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));align-content:start;gap:13px}
-    .mgc-card{min-width:0;overflow:hidden;border-radius:12px;background:#10231a;border:1px solid rgba(172,211,194,.12);cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s;color:inherit;text-align:left;padding:0;display:flex;flex-direction:column}
-    .mgc-card:hover{transform:translateY(-3px);border-color:rgba(104,196,145,.58);box-shadow:0 12px 26px rgba(0,0,0,.28)}
-    .mgc-card:focus-visible,.mgc-tab:focus-visible,.mgc-select:focus-visible,.mgc-search:focus-within{outline:2px solid #7bd5a0;outline-offset:2px}
-    .mgc-cover{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:linear-gradient(135deg,#174935,#0a1711);}
-    .mgc-cover-fallback{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:16/10;background:linear-gradient(135deg,#174935,#0a1711);color:#85cda3;font-size:32px}
-    .mgc-name{padding:9px 10px 10px;font-size:12px;line-height:1.25;font-weight:650;color:#e6f1e9;min-height:34px;text-transform:capitalize;overflow-wrap:anywhere}
-    .mgc-empty{grid-column:1/-1;border:1px dashed rgba(151,197,172,.25);border-radius:16px;padding:30px 22px;text-align:center;background:rgba(14,38,26,.58);color:#a8c2b1}
+    .mgc-card{min-width:0;overflow:hidden;border-radius:var(--mgc-radius);background:#10232c;border:1px solid rgba(174,210,203,.14);cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s;color:inherit;text-align:left;padding:0;display:flex;flex-direction:column}
+    .mgc-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--mgc-accent) 72%,transparent);box-shadow:0 12px 26px rgba(0,0,0,.28)}
+    .mgc-card:focus-visible,.mgc-tab:focus-visible,.mgc-select:focus-visible,.mgc-search:focus-within{outline:2px solid var(--mgc-accent);outline-offset:2px}
+    .mgc-cover{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:linear-gradient(135deg,#164b4a,#0b1c24);}
+    .mgc-cover-fallback{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:16/10;background:radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--mgc-accent) 28%,#0b1c24),#0b1c24 74%);color:var(--mgc-accent);font-size:32px}
+    .mgc-name{padding:9px 10px 10px;font-size:12px;line-height:1.25;font-weight:650;color:#e6f1ef;min-height:34px;text-transform:capitalize;overflow-wrap:anywhere}
+    .mgc-empty{grid-column:1/-1;border:1px dashed color-mix(in srgb,var(--mgc-accent) 38%,transparent);border-radius:var(--mgc-radius);padding:30px 22px;text-align:center;background:rgba(13,37,46,.68);color:#adc2c1}
     .mgc-empty .fa-spinner{animation:mgc-spin .9s linear infinite}@keyframes mgc-spin{to{transform:rotate(360deg)}}
-    .mgc-empty i{display:block;font-size:28px;color:#71b88b;margin:0 auto 10px}
-    .mgc-empty strong{display:block;color:#e5f1e9;font-size:14px;margin-bottom:6px}
+    .mgc-empty i{display:block;font-size:28px;color:var(--mgc-accent);margin:0 auto 10px}
+    .mgc-empty strong{display:block;color:#e5f1ef;font-size:14px;margin-bottom:6px}
     .mgc-empty p{font-size:12px;line-height:1.55;max-width:520px;margin:0 auto 13px}
-    .mgc-link{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:9px;padding:8px 12px;background:#205b43;color:#f4fff7;text-decoration:none;font:650 12px Inter,system-ui,sans-serif;cursor:pointer}
-    .mgc-link:hover{background:#2b7655}
-    .mgc-notice{margin:14px 20px 0;padding:10px 12px;border:1px solid rgba(136,189,151,.14);border-radius:10px;background:rgba(19,54,34,.42);color:#9fbaa9;font-size:11px;line-height:1.5}
-    .mgc-credit{padding:8px 20px;border-top:1px solid rgba(170,220,199,.08);font-size:10px;color:#718e7d}
-    .mgc-credit a{color:#87c6a1;text-decoration:none}.mgc-credit a:hover{text-decoration:underline}
+    .mgc-link{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:var(--mgc-radius);padding:8px 12px;background:color-mix(in srgb,var(--mgc-accent) 28%,#0b2028);color:#f4fff7;text-decoration:none;font:650 12px Inter,system-ui,sans-serif;cursor:pointer}
+    .mgc-link:hover{background:color-mix(in srgb,var(--mgc-accent) 44%,#0b2028)}
+    .mgc-notice{margin:14px 20px 0;padding:10px 12px;border:1px solid rgba(174,210,203,.14);border-radius:var(--mgc-radius);background:rgba(16,48,58,.45);color:#a6bfbc;font-size:11px;line-height:1.5}
+    .mgc-credit{padding:8px 20px;border-top:1px solid rgba(174,210,203,.1);font-size:10px;color:#8ba4a3}
+    .mgc-credit a{color:var(--mgc-accent);text-decoration:none}.mgc-credit a:hover{text-decoration:underline}
+    body.prefs-light #marineGameCenterRoot{color:#23343a}
+    body.prefs-light .mgc-shell{background:radial-gradient(ellipse at 50% -35%,color-mix(in srgb,var(--mgc-accent) 13%,transparent),transparent 60%),#eef4f3}
+    body.prefs-light .mgc-top{background:rgba(250,253,252,.88);border-color:rgba(32,66,69,.14)}
+    body.prefs-light .mgc-heading h2,body.prefs-light .mgc-name,body.prefs-light .mgc-empty strong{color:#1d3035}
+    body.prefs-light .mgc-heading p,body.prefs-light .mgc-notice,body.prefs-light .mgc-credit,body.prefs-light .mgc-empty{color:#536b6e}
+    body.prefs-light .mgc-tab,body.prefs-light .mgc-select,body.prefs-light .mgc-search{background:#f8fbfa;color:#243b40;border-color:rgba(32,66,69,.18)}
+    body.prefs-light .mgc-search input{color:#1d3035}
+    body.prefs-light .mgc-tab:hover,body.prefs-light .mgc-tab.active{background:color-mix(in srgb,var(--mgc-accent) 22%,white);color:#173b39}
+    body.prefs-light .mgc-card{background:#f9fcfb;border-color:rgba(32,66,69,.16)}
+    body.prefs-light .mgc-notice,body.prefs-light .mgc-empty{background:rgba(255,255,255,.72)}
+    body.prefs-light .mgc-credit{border-color:rgba(32,66,69,.14)}
     #marineGameOrigin{font-size:10px;color:#82aa92;margin-left:4px;text-decoration:none}
     #marineGameOrigin:hover{color:#bcebd0;text-decoration:underline}
     #marineGameOpenTab{height:40px;padding:0 13px;white-space:nowrap;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#d6e5db;font-size:12px;font-weight:650;cursor:pointer}
@@ -149,15 +162,22 @@
     image.className = 'mgc-cover';
     image.alt = '';
     image.loading = 'lazy';
-    image.src = game.image;
+    image.decoding = 'async';
+    const imageCandidates = [...new Set([game.image, game.imageFallback].filter(Boolean))];
+    let imageCandidate = 0;
     image.addEventListener('error', () => {
+      imageCandidate += 1;
+      if (imageCandidate < imageCandidates.length) {
+        image.src = imageCandidates[imageCandidate];
+        return;
+      }
       const fallback = document.createElement('div');
       fallback.className = 'mgc-cover-fallback';
       const icon = document.createElement('i');
       icon.className = 'fa-solid fa-gamepad';
       fallback.append(icon);
       image.replaceWith(fallback);
-    }, { once: true });
+    });
     const name = document.createElement('span');
     name.className = 'mgc-name';
     name.textContent = game.name;
@@ -294,13 +314,16 @@
     try {
       const url = new URL(expandGnPath(row.url), GN_MATH_SITE);
       if (url.protocol !== 'https:') return null;
-      const image = new URL(expandGnPath(row.cover || ''), GN_MATH_COVERS + '/');
+      const coverValue = safeText(row.cover || '');
+      const coverPath = coverValue.replace(/^\{COVER_URL\}/, '').replace(/^\/+/, '');
+      const image = new URL(expandGnPath(coverValue), GN_MATH_COVERS + '/');
       if (image.protocol !== 'https:') return null;
       return {
         id: String(row.id),
         name: safeText(row.name),
         genre: safeText(row.genre || row.category),
         image: image.href,
+        imageFallback: coverPath ? new URL(coverPath, GN_MATH_COVERS_FALLBACK + '/').href : '',
         url: url.href,
         provider: 'gn-math'
       };
@@ -347,7 +370,8 @@
           const url = new URL(row.url, SERAPH_HOME);
           const image = new URL(row.image);
           if (url.origin !== SERAPH_HOME || !image.href.startsWith(SERAPH_IMAGE_PREFIX)) return false;
-          return { ...row, url: url.href, image: image.href, provider: 'seraph' };
+          const coverName = image.href.slice(SERAPH_IMAGE_PREFIX.length);
+          return { ...row, url: url.href, image: image.href, imageFallback: SERAPH_IMAGE_FALLBACK_PREFIX + coverName, provider: 'seraph' };
         } catch (_) { return false; }
       }) : [];
       state.seraphGames = state.seraphGames.filter(Boolean);
