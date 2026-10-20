@@ -5,7 +5,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "build:netlify": "node scripts/build-netlify.js"
   },
   "engines": {
     "node": ">=18"
