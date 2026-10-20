@@ -88,8 +88,7 @@
     body.marine-browser-fullscreen #browserWindow>.window-header,
     body.marine-browser-fullscreen #browserWindow>div:nth-child(2),
     body.marine-browser-fullscreen #browserWindow>div:nth-child(3),
-    body.marine-browser-fullscreen #browserWindow>div:nth-child(4),
-    body.marine-browser-fullscreen #browserWindow>div:nth-child(5){display:none!important}
+    body.marine-browser-fullscreen #browserWindow>div:nth-child(4){display:none!important}
     body.marine-browser-fullscreen #browserWindow{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;max-width:none!important;max-height:none!important;border:0!important;border-radius:0!important;background:#000!important}
     body.marine-browser-fullscreen #browserWindow>div:last-child{flex:1 1 auto!important;min-height:0!important}
     @media(max-width:1050px){.mgc-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.mgc-controls{grid-template-columns:auto minmax(120px,1fr) 125px}.mgc-select:last-child{grid-column:1/-1}}

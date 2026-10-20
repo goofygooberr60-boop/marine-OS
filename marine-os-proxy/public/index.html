@@ -659,22 +659,15 @@ dialog.modal::backdrop{background:rgba(3,14,20,.84);backdrop-filter:blur(8px)}
 </div>
 
 <!-- Browser App Window -->
-<div id="browserWindow" class="os-window absolute top-[20%] left-[20%] w-[1000px] max-w-[95vw] h-[700px] max-h-[80vh] bg-[#1a1b26]/95 backdrop-blur-xl rounded-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden hidden z-30">
-    <!-- Window Header -->
-    <div class="h-11 bg-[#18181b] flex items-center justify-between px-4 select-none cursor-move shrink-0 window-header border-b border-white/5">
-        <div class="flex items-center gap-2.5">
-            <i class="fa-regular fa-compass text-blue-400 text-lg"></i>
-            <span class="font-bold text-sm text-slate-200 tracking-wide">Browser</span>
-        </div>
-        <div class="flex items-center gap-4 text-slate-400">
-            <button class="hover:text-white transition-colors cursor-pointer w-6 h-6 flex items-center justify-center" onclick="minimizeWindow('browserWindow')"><i class="fa-solid fa-minus"></i></button>
-            <button class="hover:text-white transition-colors cursor-pointer w-6 h-6 flex items-center justify-center text-[10px]" onclick="toggleMaximize('browserWindow')"><i class="fa-regular fa-square"></i></button>
-            <button class="hover:text-white transition-colors cursor-pointer w-6 h-6 flex items-center justify-center" onclick="closeWindow('browserWindow')"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-    </div>
-    <div class="flex items-end gap-1 px-2 pt-2 bg-[#0e0e13] shrink-0">
-        <div id="uvTabs" class="flex items-end gap-1 min-w-0 overflow-x-auto"></div>
+<div id="browserWindow" class="os-window absolute top-[20%] left-[20%] w-[1000px] max-w-[95vw] h-[700px] max-h-[80vh] bg-[#1a1b26]/95 backdrop-blur-xl rounded-xl border border-white/10 shadow-2xl flex flex-col overflow-hidden hidden z-30" aria-label="Browser window">
+    <div class="h-11 bg-[#0e0e13] flex items-center gap-1 px-2 select-none cursor-move shrink-0 window-header border-b border-white/5">
+        <div id="uvTabs" class="flex flex-1 items-end gap-1 min-w-0 overflow-x-auto"></div>
         <button id="uvNewTab" title="New tab (Alt+T)" aria-label="New tab" class="w-8 h-8 mb-1 shrink-0 flex items-center justify-center rounded-lg hover:bg-white/10 text-slate-300 cursor-pointer"><i class="fa-solid fa-plus"></i></button>
+        <div class="flex items-center gap-1 text-slate-400 ml-2 browser-window-actions">
+            <button class="hover:text-white transition-colors cursor-pointer w-6 h-6 flex items-center justify-center" onclick="minimizeWindow('browserWindow')" title="Minimize" aria-label="Minimize Browser"><i class="fa-solid fa-minus"></i></button>
+            <button class="hover:text-white transition-colors cursor-pointer w-6 h-6 flex items-center justify-center text-[10px]" onclick="toggleMaximize('browserWindow')" title="Maximize or restore" aria-label="Maximize or restore Browser"><i class="fa-regular fa-square"></i></button>
+            <button class="hover:text-white transition-colors cursor-pointer w-6 h-6 flex items-center justify-center hover:!text-red-400" onclick="closeWindow('browserWindow')" title="Close" aria-label="Close Browser"><i class="fa-solid fa-xmark"></i></button>
+        </div>
     </div>
     <div class="flex items-center gap-1 px-2.5 py-2 bg-[#17171d] border-b border-white/5 shrink-0">
         <button id="uvBack" title="Back" aria-label="Back" class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-white/10 text-slate-300 cursor-pointer "><i class="fa-solid fa-arrow-left"></i></button><button id="uvFwd" title="Forward" aria-label="Forward" class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-white/10 text-slate-300 cursor-pointer "><i class="fa-solid fa-arrow-right"></i></button><button id="uvReload" title="Reload" aria-label="Reload" class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-white/10 text-slate-300 cursor-pointer "><i class="fa-solid fa-rotate-right"></i></button><button id="uvHomeBtn" title="New tab page" aria-label="New tab page" class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-white/10 text-slate-300 cursor-pointer "><i class="fa-solid fa-house"></i></button>
@@ -2821,7 +2814,7 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
   setTimeout(()=>document.addEventListener('pointerdown',function close(e){if(!menu.contains(e.target)){menu.remove();document.removeEventListener('pointerdown',close)}},{once:true}),0);
  }
  qsa('.os-window').forEach(w=>{
-  const header=w.querySelector('.window-header'),actions=header&&Array.from(header.children).find(x=>x.classList.contains('flex')&&x.querySelector('button'));
+  const header=w.querySelector('.window-header'),actions=header&&(header.querySelector('.browser-window-actions')||Array.from(header.children).find(x=>x.classList.contains('flex')&&x.querySelector('button')));
   if(actions&&!actions.querySelector('.marine-snap-trigger')){
    const b=document.createElement('button');b.type='button';b.className='marine-snap-trigger';b.title='Snap window';b.setAttribute('aria-label','Snap window');b.innerHTML='<i class="fa-solid fa-table-cells-large text-xs"></i>';
    b.addEventListener('click',e=>{e.stopPropagation();openSnapMenu(e,w)});actions.insertBefore(b,actions.firstChild)
@@ -3295,7 +3288,7 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
  }
  function bindPinButtons(){
   all('.os-window').forEach(w=>{
-   const close=w.querySelector('button[aria-label^="Close"],button[onclick*="closeWindow"]');const header=w.querySelector('.window-header');if(!header||header.querySelector('.marine-pin-window'))return;
+   const close=w.querySelector('button[onclick*="closeWindow"]')||w.querySelector('button[aria-label^="Close"]');const header=w.querySelector('.window-header');if(!header||header.querySelector('.marine-pin-window'))return;
    const b=document.createElement('button');b.type='button';b.className='marine-pin-window';b.dataset.windowId=w.id;b.style.cssText='width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:#a8c4bd;cursor:pointer';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setPinned(w.id,!pinnedWindows.includes(w.id))});
    if(close&&close.parentElement)close.parentElement.insertBefore(b,close);else header.append(b);
   });
@@ -3658,6 +3651,6 @@ body.prefs-wallpaper-abyss #lockScreenBg,body.prefs-wallpaper-kelp #lockScreenBg
 </script>
 <script defer src="/marine-enhancements.js"></script>
 <script defer src="/marine-suite.js"></script>
-<script defer src="/marine-games.js?v=20261019-5"></script>
+<script defer src="/marine-games.js?v=20261019-6"></script>
 </body>
 </html>
