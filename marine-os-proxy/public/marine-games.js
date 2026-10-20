@@ -15,6 +15,7 @@
   const GN_MATH_HTML = 'https://cdn.jsdelivr.net/gh/gn-math/html@main';
   const SERAPH_IMAGE_PREFIX = 'https://raw.githubusercontent.com/a456pur/seraph/main/images/thumbnails/';
   const SERAPH_IMAGE_FALLBACK_PREFIX = 'https://seraph.reveriestudios.online/images/thumbnails/';
+  const PAGE_SIZE = 60;
   const safeText = (value) => String(value || '').trim();
   const state = {
     section: 'gn-math', query: '', sort: 'featured', genre: 'all',
@@ -56,6 +57,8 @@
     .mgc-empty p{font-size:12px;line-height:1.55;max-width:520px;margin:0 auto 13px}
     .mgc-link{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:var(--mgc-radius);padding:8px 12px;background:color-mix(in srgb,var(--mgc-accent) 28%,#0b2028);color:#f4fff7;text-decoration:none;font:650 12px Inter,system-ui,sans-serif;cursor:pointer}
     .mgc-link:hover{background:color-mix(in srgb,var(--mgc-accent) 44%,#0b2028)}
+    .mgc-more{grid-column:1/-1;justify-self:center;margin:6px 0 10px;padding:10px 16px;border:1px solid color-mix(in srgb,var(--mgc-accent) 42%,transparent);border-radius:var(--mgc-radius);background:color-mix(in srgb,var(--mgc-accent) 16%,#0b2028);color:#e8f0ed;font:650 12px Inter,system-ui,sans-serif;cursor:pointer}
+    .mgc-more:hover{background:color-mix(in srgb,var(--mgc-accent) 30%,#0b2028)}
     .mgc-notice{margin:14px 20px 0;padding:10px 12px;border:1px solid rgba(174,210,203,.14);border-radius:var(--mgc-radius);background:rgba(16,48,58,.45);color:#a6bfbc;font-size:11px;line-height:1.5}
     .mgc-credit{padding:8px 20px;border-top:1px solid rgba(174,210,203,.1);font-size:10px;color:#8ba4a3}
     .mgc-credit a{color:var(--mgc-accent);text-decoration:none}.mgc-credit a:hover{text-decoration:underline}
@@ -68,6 +71,7 @@
     body.prefs-light .mgc-search input{color:#1d3035}
     body.prefs-light .mgc-tab:hover,body.prefs-light .mgc-tab.active{background:color-mix(in srgb,var(--mgc-accent) 22%,white);color:#173b39}
     body.prefs-light .mgc-card{background:#f9fcfb;border-color:rgba(32,66,69,.16)}
+    body.prefs-light .mgc-more{background:color-mix(in srgb,var(--mgc-accent) 18%,white);color:#1d3035}
     body.prefs-light .mgc-notice,body.prefs-light .mgc-empty{background:rgba(255,255,255,.72)}
     body.prefs-light .mgc-credit{border-color:rgba(32,66,69,.14)}
     #marineGameOrigin{font-size:10px;color:#82aa92;margin-left:4px;text-decoration:none}
@@ -154,6 +158,14 @@
   }
 
   function cardFor(game) {
+    function fallbackCover() {
+      const fallback = document.createElement('div');
+      fallback.className = 'mgc-cover-fallback';
+      const icon = document.createElement('i');
+      icon.className = 'fa-solid fa-gamepad';
+      fallback.append(icon);
+      return fallback;
+    }
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'mgc-card';
@@ -171,17 +183,15 @@
         image.src = imageCandidates[imageCandidate];
         return;
       }
-      const fallback = document.createElement('div');
-      fallback.className = 'mgc-cover-fallback';
-      const icon = document.createElement('i');
-      icon.className = 'fa-solid fa-gamepad';
-      fallback.append(icon);
-      image.replaceWith(fallback);
+      image.replaceWith(fallbackCover());
     });
+    let cover = image;
+    if (imageCandidates.length) image.src = imageCandidates[0];
+    else cover = fallbackCover();
     const name = document.createElement('span');
     name.className = 'mgc-name';
     name.textContent = game.name;
-    card.append(image, name);
+    card.append(cover, name);
     card.addEventListener('click', () => openGame(game));
     return card;
   }
@@ -235,15 +245,37 @@
     }
 
     const games = filteredGames();
-    summary.textContent = games.length.toLocaleString() + ' ' + collectionName + ' games' + (isSeraph && state.genre !== 'all' ? ' · ' + state.genre.replace(/-/g, ' ') : '');
+    const collectionLabel = collectionName + ' games' + (isSeraph && state.genre !== 'all' ? ' · ' + state.genre.replace(/-/g, ' ') : '');
     grid.replaceChildren();
+    grid.scrollTop = 0;
     if (!games.length) {
       makeEmpty('fa-magnifying-glass', 'No games found', 'Try a shorter search or choose a different category.', 'Clear search', '#');
       const clear = grid.querySelector('a');
       clear.addEventListener('click', event => { event.preventDefault(); state.query = ''; state.genre = 'all'; search.value = ''; genre.value = 'all'; render(); });
       return;
     }
-    games.forEach(game => grid.append(cardFor(game)));
+    const initialGames = games.slice(0, PAGE_SIZE);
+    initialGames.forEach(game => grid.append(cardFor(game)));
+    summary.textContent = 'Showing ' + initialGames.length.toLocaleString() + ' of ' + games.length.toLocaleString() + ' ' + collectionLabel;
+
+    function appendMore(startAt) {
+      const remaining = games.length - startAt;
+      if (remaining <= 0) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'mgc-more';
+      button.textContent = 'Load next ' + Math.min(PAGE_SIZE, remaining) + ' games · ' + remaining + ' remaining';
+      button.addEventListener('click', () => {
+        button.remove();
+        const next = games.slice(startAt, startAt + PAGE_SIZE);
+        next.forEach(game => grid.append(cardFor(game)));
+        const shown = startAt + next.length;
+        summary.textContent = 'Showing ' + shown.toLocaleString() + ' of ' + games.length.toLocaleString() + ' ' + collectionLabel;
+        appendMore(shown);
+      }, { once: true });
+      grid.append(button);
+    }
+    appendMore(initialGames.length);
   }
 
   function selectSection(id) {
