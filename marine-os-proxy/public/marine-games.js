@@ -6,6 +6,7 @@
   const SERAPH_SOURCE = 'https://github.com/a456pur/seraph';
   const GN_MATH_SOURCE = 'https://github.com/gn-math';
   const GN_MATH_SITE = 'https://gn-math.github.io/';
+  const ITCH_SOURCE = 'https://itch.io/games/free/tag-html5';
   const GN_MATH_ZONES = [
     'https://raw.githubusercontent.com/gn-math/assets/main/zones.json',
     'https://cdn.jsdelivr.net/gh/gn-math/assets@main/zones.json'
@@ -19,7 +20,8 @@
   const safeText = (value) => String(value || '').trim();
   const state = {
     section: 'gn-math', query: '', sort: 'featured', genre: 'all',
-    gnGames: [], seraphGames: [], gnStatus: 'loading', seraphStatus: 'loading'
+    gnGames: [], seraphGames: [], itchGames: [],
+    gnStatus: 'loading', seraphStatus: 'loading', itchStatus: 'loading'
   };
 
   const style = document.createElement('style');
@@ -103,6 +105,7 @@
           <div class="mgc-tabs" role="tablist" aria-label="Game collections">
             <button class="mgc-tab active" id="mgcGnTab" type="button" role="tab" aria-selected="true"><i class="fa-solid fa-calculator"></i> GN Math</button>
             <button class="mgc-tab" id="mgcSeraphTab" type="button" role="tab" aria-selected="false"><i class="fa-solid fa-wand-magic-sparkles"></i> Seraph</button>
+            <button class="mgc-tab" id="mgcItchTab" type="button" role="tab" aria-selected="false"><i class="fa-solid fa-gamepad"></i> itch.io</button>
           </div>
           <label class="mgc-search"><i class="fa-solid fa-magnifying-glass"></i><input id="mgcSearch" type="search" placeholder="Search games…" aria-label="Search games"></label>
           <select class="mgc-select" id="mgcSort" aria-label="Sort games"><option value="featured">Featured order</option><option value="az">Name A–Z</option><option value="za">Name Z–A</option><option value="newest">Newest first</option></select>
@@ -123,6 +126,9 @@
   const notice = root.querySelector('#mgcNotice');
   const gnTab = root.querySelector('#mgcGnTab');
   const seraphTab = root.querySelector('#mgcSeraphTab');
+  const itchTab = root.querySelector('#mgcItchTab');
+  let gameBatchObserver = null;
+  let renderVersion = 0;
 
   function makeEmpty(icon, title, body, linkText, href, callback) {
     grid.replaceChildren();
@@ -197,9 +203,10 @@
   }
 
   function filteredGames() {
-    let games = (state.section === 'seraph' ? state.seraphGames : state.gnGames).filter(game => {
+    const sourceGames = state.section === 'seraph' ? state.seraphGames : state.section === 'itch' ? state.itchGames : state.gnGames;
+    let games = sourceGames.filter(game => {
       const matchesQuery = !state.query || (game.name + ' ' + game.genre).toLowerCase().includes(state.query);
-      const matchesGenre = state.section !== 'seraph' || state.genre === 'all' || game.genre === state.genre;
+      const matchesGenre = !['seraph', 'itch'].includes(state.section) || state.genre === 'all' || game.genre === state.genre;
       return matchesQuery && matchesGenre;
     });
     if (state.sort === 'az') games.sort((a, b) => a.name.localeCompare(b.name));
@@ -208,31 +215,56 @@
     return games;
   }
 
+  function refreshGenres(games) {
+    const selected = state.genre;
+    const genres = [...new Set(games.map(game => safeText(game.genre)).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    genre.replaceChildren(new Option('All categories', 'all'));
+    genres.forEach(value => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = value.replace(/-/g, ' ').replace(/\b\w/g, character => character.toUpperCase());
+      genre.append(option);
+    });
+    state.genre = selected === 'all' || genres.includes(selected) ? selected : 'all';
+    genre.value = state.genre;
+  }
+
   function render() {
+    const activeRender = ++renderVersion;
+    gameBatchObserver?.disconnect();
+    gameBatchObserver = null;
+    const isGn = state.section === 'gn-math';
     const isSeraph = state.section === 'seraph';
-    gnTab.classList.toggle('active', !isSeraph);
+    const isItch = state.section === 'itch';
+    gnTab.classList.toggle('active', isGn);
     seraphTab.classList.toggle('active', isSeraph);
-    gnTab.setAttribute('aria-selected', String(!isSeraph));
+    itchTab.classList.toggle('active', isItch);
+    gnTab.setAttribute('aria-selected', String(isGn));
     seraphTab.setAttribute('aria-selected', String(isSeraph));
-    grid.setAttribute('aria-labelledby', isSeraph ? 'mgcSeraphTab' : 'mgcGnTab');
-    genre.hidden = !isSeraph;
+    itchTab.setAttribute('aria-selected', String(isItch));
+    grid.setAttribute('aria-labelledby', isSeraph ? 'mgcSeraphTab' : isItch ? 'mgcItchTab' : 'mgcGnTab');
+    genre.hidden = !(isSeraph || isItch);
     const newestOption = sort.querySelector('option[value="newest"]');
-    if (newestOption) newestOption.hidden = isSeraph;
-    root.querySelector('#mgcSourceLink').href = isSeraph ? SERAPH_SOURCE : GN_MATH_SOURCE;
+    if (newestOption) newestOption.hidden = !isGn;
+    if (isSeraph || isItch) refreshGenres(isSeraph ? state.seraphGames : state.itchGames);
+    const activeSource = isSeraph ? SERAPH_SOURCE : isItch ? ITCH_SOURCE : GN_MATH_SOURCE;
+    root.querySelector('#mgcSourceLink').href = activeSource;
     const creditLink = root.querySelector('#mgcCreditLink');
     const credit = root.querySelector('#mgcCredit');
-    creditLink.href = isSeraph ? SERAPH_SOURCE : GN_MATH_SOURCE;
-    creditLink.textContent = isSeraph ? 'Seraph' : 'GN Math';
+    creditLink.href = activeSource;
+    creditLink.textContent = isSeraph ? 'Seraph' : isItch ? 'itch.io' : 'GN Math';
     credit.firstChild.textContent = 'Game pages open from their published source. Catalog: ';
 
-    if (!isSeraph) {
+    if (isGn) {
       notice.textContent = 'GN Math game names and covers load from its public catalog. Games open from their published source; some games may not allow embedding.';
+    } else if (isSeraph) {
+      notice.textContent = 'Seraph’s catalog and covers are shown here. Games open from Seraph’s published host; more cards load as you scroll.';
     } else {
-      notice.textContent = 'Seraph’s catalog and covers are shown here. Games open from Seraph’s published host; some games may not allow embedding.';
+      notice.textContent = 'A small selection of browser games from their creators on itch.io. Some pages may require the Open in new tab button if the creator or browser blocks embedding.';
     }
 
-    const status = isSeraph ? state.seraphStatus : state.gnStatus;
-    const collectionName = isSeraph ? 'Seraph' : 'GN Math';
+    const status = isSeraph ? state.seraphStatus : isItch ? state.itchStatus : state.gnStatus;
+    const collectionName = isSeraph ? 'Seraph' : isItch ? 'itch.io' : 'GN Math';
     if (status === 'loading') {
       summary.textContent = 'Loading ' + collectionName + ' games…';
       makeEmpty('fa-spinner', 'Loading ' + collectionName, 'Fetching the game list and cover references.', '', '');
@@ -240,12 +272,14 @@
     }
     if (status === 'error') {
       summary.textContent = collectionName + ' catalog unavailable';
-      makeEmpty('fa-triangle-exclamation', 'Could not load ' + collectionName, 'Check the connection to the public game catalog, then try again.', 'Retry', '', isSeraph ? loadSeraphCatalog : loadGnCatalog);
+      const retry = isSeraph ? loadSeraphCatalog : isItch ? loadItchCatalog : loadGnCatalog;
+      const details = isItch ? 'The local itch.io game list could not be read. Try again.' : 'Check the connection to the public game catalog, then try again.';
+      makeEmpty('fa-triangle-exclamation', 'Could not load ' + collectionName, details, 'Retry', '', retry);
       return;
     }
 
     const games = filteredGames();
-    const collectionLabel = collectionName + ' games' + (isSeraph && state.genre !== 'all' ? ' · ' + state.genre.replace(/-/g, ' ') : '');
+    const collectionLabel = collectionName + ' games' + ((isSeraph || isItch) && state.genre !== 'all' ? ' · ' + state.genre.replace(/-/g, ' ') : '');
     grid.replaceChildren();
     grid.scrollTop = 0;
     if (!games.length) {
@@ -254,28 +288,47 @@
       clear.addEventListener('click', event => { event.preventDefault(); state.query = ''; state.genre = 'all'; search.value = ''; genre.value = 'all'; render(); });
       return;
     }
-    const initialGames = games.slice(0, PAGE_SIZE);
-    initialGames.forEach(game => grid.append(cardFor(game)));
-    summary.textContent = 'Showing ' + initialGames.length.toLocaleString() + ' of ' + games.length.toLocaleString() + ' ' + collectionLabel;
-
-    function appendMore(startAt) {
-      const remaining = games.length - startAt;
-      if (remaining <= 0) return;
+    const batchSize = isSeraph ? 36 : PAGE_SIZE;
+    let shown = 0;
+    function appendMore() {
+      if (activeRender !== renderVersion || shown >= games.length) return;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'mgc-more';
-      button.textContent = 'Load next ' + Math.min(PAGE_SIZE, remaining) + ' games · ' + remaining + ' remaining';
-      button.addEventListener('click', () => {
+      button.textContent = 'Scroll to load the next ' + Math.min(batchSize, games.length - shown) + ' games';
+      let loading = false;
+      const loadBatch = () => {
+        if (loading || activeRender !== renderVersion || !button.isConnected) return;
+        loading = true;
+        gameBatchObserver?.disconnect();
+        gameBatchObserver = null;
+        const next = games.slice(shown, shown + batchSize);
+        const cards = document.createDocumentFragment();
+        next.forEach(game => cards.append(cardFor(game)));
         button.remove();
-        const next = games.slice(startAt, startAt + PAGE_SIZE);
-        next.forEach(game => grid.append(cardFor(game)));
-        const shown = startAt + next.length;
+        grid.append(cards);
+        shown += next.length;
         summary.textContent = 'Showing ' + shown.toLocaleString() + ' of ' + games.length.toLocaleString() + ' ' + collectionLabel;
-        appendMore(shown);
-      }, { once: true });
+        appendMore();
+      };
+      button.addEventListener('click', loadBatch, { once: true });
       grid.append(button);
+      if ('IntersectionObserver' in window) {
+        gameBatchObserver = new IntersectionObserver(entries => {
+          if (entries.some(entry => entry.isIntersecting)) loadBatch();
+        }, { root: grid, rootMargin: '420px 0px', threshold: 0 });
+        gameBatchObserver.observe(button);
+      } else {
+        button.textContent = 'Load next ' + Math.min(batchSize, games.length - shown) + ' games';
+      }
     }
-    appendMore(initialGames.length);
+    const firstBatch = games.slice(0, batchSize);
+    const firstCards = document.createDocumentFragment();
+    firstBatch.forEach(game => firstCards.append(cardFor(game)));
+    grid.append(firstCards);
+    shown = firstBatch.length;
+    summary.textContent = 'Showing ' + shown.toLocaleString() + ' of ' + games.length.toLocaleString() + ' ' + collectionLabel;
+    appendMore();
   }
 
   function selectSection(id) {
@@ -290,6 +343,7 @@
   }
   gnTab.addEventListener('click', () => selectSection('gn-math'));
   seraphTab.addEventListener('click', () => selectSection('seraph'));
+  itchTab.addEventListener('click', () => selectSection('itch'));
   search.addEventListener('input', () => { state.query = search.value.trim().toLowerCase(); render(); });
   sort.addEventListener('change', () => { state.sort = sort.value; render(); });
   genre.addEventListener('change', () => { state.genre = genre.value; render(); });
@@ -312,6 +366,7 @@
     let target;
     try { target = new URL(game.url); } catch (_) { return; }
     if (target.protocol !== 'https:' || (game.provider === 'seraph' && target.origin !== SERAPH_HOME)) return;
+    if (game.provider === 'itch' && !(target.hostname === 'itch.io' || target.hostname.endsWith('.itch.io'))) return;
     currentGame = { ...game, url: target.href };
     window.__marineCurrentGameLaunch = { title: game.name, url: target.href, proxy: false };
     const title = document.getElementById('gameModalTitle');
@@ -397,25 +452,20 @@
       if (!response.ok) throw new Error('Catalog request failed');
       const rows = await response.json();
       state.seraphGames = Array.isArray(rows) ? rows.map(row => {
-        if (!row || !safeText(row.name) || !safeText(row.id)) return false;
+        if (!row || !safeText(row.name) || !safeText(row.id) || !safeText(row.path)) return false;
         try {
+          const path = safeText(row.path);
+          if (path.startsWith('/') || !/^[A-Za-z0-9._~/-]+$/.test(path) || !path.endsWith('/index.html') || path.split('/').some(part => !part || part === '.' || part === '..')) return false;
           const url = new URL(row.url, SERAPH_HOME);
-          const image = new URL(row.image);
-          if (url.origin !== SERAPH_HOME || !image.href.startsWith(SERAPH_IMAGE_PREFIX)) return false;
-          const coverName = image.href.slice(SERAPH_IMAGE_PREFIX.length);
-          return { ...row, url: url.href, image: image.href, imageFallback: SERAPH_IMAGE_FALLBACK_PREFIX + coverName, provider: 'seraph' };
+          const expectedUrl = new URL('/games/' + path, SERAPH_HOME);
+          const image = row.image ? new URL(row.image) : null;
+          if (url.href !== expectedUrl.href || (image && (image.origin !== 'https://raw.githubusercontent.com' || !image.href.startsWith(SERAPH_IMAGE_PREFIX)))) return false;
+          const coverName = image ? image.href.slice(SERAPH_IMAGE_PREFIX.length) : '';
+          return { ...row, url: expectedUrl.href, image: image ? image.href : '', imageFallback: coverName ? SERAPH_IMAGE_FALLBACK_PREFIX + coverName : '', provider: 'seraph' };
         } catch (_) { return false; }
       }) : [];
       state.seraphGames = state.seraphGames.filter(Boolean);
       if (!state.seraphGames.length) throw new Error('Seraph catalog contains no playable entries');
-      const genres = [...new Set(state.seraphGames.map(game => safeText(game.genre)).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-      genre.replaceChildren(new Option('All categories', 'all'));
-      genres.forEach(value => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value.replace(/-/g, ' ').replace(/\b\w/g, character => character.toUpperCase());
-        genre.append(option);
-      });
       state.seraphStatus = 'ready';
     } catch (_) {
       state.seraphGames = [];
@@ -424,8 +474,34 @@
     render();
   }
 
+  async function loadItchCatalog() {
+    state.itchStatus = 'loading';
+    render();
+    try {
+      const response = await fetch('/itch-games.json', { cache: 'no-cache' });
+      if (!response.ok) throw new Error('Catalog request failed');
+      const rows = await response.json();
+      state.itchGames = Array.isArray(rows) ? rows.map(row => {
+        if (!row || !safeText(row.name) || !safeText(row.url)) return false;
+        try {
+          const url = new URL(row.url);
+          const image = row.image ? new URL(row.image) : null;
+          if (url.protocol !== 'https:' || !(url.hostname === 'itch.io' || url.hostname.endsWith('.itch.io'))) return false;
+          if (image && (image.protocol !== 'https:' || image.hostname !== 'img.itch.zone')) return false;
+          return { ...row, url: url.href, image: image ? image.href : '', provider: 'itch' };
+        } catch (_) { return false; }
+      }).filter(Boolean) : [];
+      if (!state.itchGames.length) throw new Error('Itch catalog has no valid games');
+      state.itchStatus = 'ready';
+    } catch (_) {
+      state.itchGames = [];
+      state.itchStatus = 'error';
+    }
+    render();
+  }
+
   async function loadCatalog() {
-    await Promise.all([loadGnCatalog(), loadSeraphCatalog()]);
+    await Promise.all([loadGnCatalog(), loadSeraphCatalog(), loadItchCatalog()]);
   }
 
   const exitFullscreen = document.createElement('button');

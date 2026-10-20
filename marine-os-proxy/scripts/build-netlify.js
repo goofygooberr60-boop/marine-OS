@@ -11,7 +11,7 @@ if (!outputDir.startsWith(projectDir + path.sep)) {
   throw new Error("Refusing to build outside the Marine OS project directory.");
 }
 
-const files = ["index.html", "marine-enhancements.js", "marine-suite.js", "marine-games.js", "seraph-games.json", "marine-netlify.js"];
+const files = ["index.html", "marine-enhancements.js", "marine-suite.js", "marine-games.js", "seraph-games.json", "itch-games.json", "marine-netlify.js"];
 for (const name of files) {
   if (!fs.existsSync(path.join(publicDir, name))) {
     throw new Error(`Required Netlify site file is missing: public/${name}`);
