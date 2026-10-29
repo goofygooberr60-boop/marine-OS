@@ -110,35 +110,9 @@ async function sendFile(req, res, { file, vendor }) {
   fs.createReadStream(file).on("error", () => res.destroy()).pipe(res);
 }
 
-// ---------- /diag: can this server itself reach real sites? (shown by Settings > Browser > Run test) ----------
-function pkgVersion(name) {
-  try { return JSON.parse(fs.readFileSync(path.join(modulesDir, name, "package.json"), "utf8")).version; } catch { return null; }
-}
-const SITES = [["example.com", "https://example.com/"], ["Wikipedia", "https://www.wikipedia.org/"],
-  ["Bing search", "https://www.bing.com/search?q=test"], ["DuckDuckGo Lite", "https://lite.duckduckgo.com/lite/?q=test"],
-  ["Google search", "https://www.google.com/search?q=test"]];
-const BLOCKED = /captcha|unusual traffic|are you a robot|verify you are (a )?human|anomaly/i;
-let diagCache = null, diagAt = 0;
-async function diag() {
-  if (diagCache && Date.now() - diagAt < 60000) return diagCache;   // at most one check a minute
-  const sites = await Promise.all(SITES.map(async ([name, url]) => {
-    const t0 = Date.now();
-    try {
-      const r = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(8000),
-        headers: { "user-agent": "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36", "accept-language": "en-US,en;q=0.9" } });
-      const txt = (await r.text()).slice(0, 20000);
-      return { name, status: r.status, ms: Date.now() - t0, blocked: r.status === 403 || r.status === 429 || r.status === 202 || BLOCKED.test(txt) };
-    } catch (e) { return { name, error: (e.cause && e.cause.code) || e.name || "error", ms: Date.now() - t0 }; }
-  }));
-  diagCache = { wisp: "wisp-js " + (pkgVersion("@mercuryworkshop/wisp-js") || "?") + " loaded", scramjet: !!scramDir, node: process.version, sites };
-  diagAt = Date.now();
-  return diagCache;
-}
-
 const server = createServer(async (req, res) => {
   try {
     if (req.url === "/healthz") { res.setHeader("Cache-Control", "no-store"); res.end("ok"); return; }
-    if (req.url === "/diag") { res.setHeader("Content-Type", "application/json"); res.setHeader("Cache-Control", "no-store"); res.end(JSON.stringify(await diag())); return; }
     // Optional: only if the proxy loads but pages never arrive.  ISOLATE=1 npm start  (can blank game embeds)
     if (process.env.ISOLATE) {
       res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
